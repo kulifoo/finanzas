@@ -136,6 +136,19 @@ tbody tr:hover td{background:color-mix(in srgb,var(--surface-2) 55%,transparent)
 .drop.over{border-color:var(--accent);background:var(--accent-soft)}
 .note{font-size:13px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:10px 12px}
 .ai-out{white-space:pre-wrap;font-size:14.5px;line-height:1.6;max-width:75ch}
+.ticket{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.ticket img{width:120px;max-height:180px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.ticket .doc{width:120px;height:150px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;color:var(--ink-2);background:var(--surface)}
+.ticket-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ticket-fields .wide{grid-column:1/-1}
+.ask{border:1.5px solid var(--warn);background:var(--warn-soft);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ask b{color:var(--ink)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{padding:5px 10px;font-size:13px}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+@media (max-width:620px){.ticket{grid-template-columns:minmax(0,1fr)}.ticket img,.ticket .doc{width:100%;max-height:220px}}
+.cierre{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:16px;padding:14px 16px;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent)}
+.cierre p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
 .empty{padding:28px;text-align:center;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;align-items:center}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9px;font-size:14px;z-index:60;max-width:calc(100% - 32px)}
 .confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px}
@@ -188,6 +201,7 @@ tbody tr:hover td{background:color-mix(in srgb,var(--surface-2) 55%,transparent)
   <div id="offline" class="note" style="margin-top:16px" hidden>No se pudo conectar con el almacenamiento compartido. Iniciá sesión en claude.ai para ver y guardar los datos de la familia.</div>
 
   <!-- RESUMEN -->
+  <div id="cierreBanner" class="cierre" hidden></div>
   <section class="view" id="v-resumen">
     <div class="kpis" id="kpis"></div>
     <div class="grid2">
@@ -224,7 +238,12 @@ tbody tr:hover td{background:color-mix(in srgb,var(--surface-2) 55%,transparent)
   <!-- MOVIMIENTOS -->
   <section class="view" id="v-movs" hidden>
     <div class="panel">
-      <div class="panel-h"><h2>Cargar movimiento</h2></div>
+      <div class="panel-h"><h2>Cargar movimiento</h2>
+        <div class="toolbar">
+          <label class="btn">Sacar foto del ticket<input type="file" id="tkCam" accept="image/*" capture="environment" hidden></label>
+          <label class="btn">Subir ticket o factura<input type="file" id="tkFile" accept="image/*,application/pdf" hidden></label>
+        </div></div>
+      <div id="tkBox"></div>
       <form id="movForm" class="form-row" autocomplete="off">
         <label class="f">Fecha<input type="date" id="mFecha" required></label>
         <label class="f">Tipo<select id="mTipo"><option value="gasto">Gasto</option><option value="ingreso">Ingreso</option></select></label>
@@ -553,7 +572,7 @@ function renderBankHistory() {
 function renderAll() {
   $('#monthLbl').textContent = monthName(S.month);
   renderKpis(); renderBars(); renderLeaks(); renderTrend(); renderNature(); renderAI();
-  renderMovs(); renderPresu(); renderBankHistory();
+  renderMovs(); renderPresu(); renderBankHistory(); renderCierre();
 }
 
 /* ---------- db ---------- */
@@ -572,7 +591,7 @@ function subMovs() {
 }
 const CFG = window.FK_CONFIG || {};
 const SB_LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js';
-const COLS = ['rubros', 'conceptos', 'movimientos', 'resumenes', 'analisis'];
+const COLS = ['rubros', 'conceptos', 'movimientos', 'resumenes', 'analisis', 'cierres'];
 
 async function initDb() {
   let db = null;
@@ -593,6 +612,7 @@ function attachDb(db) {
   sub('conceptos', a => S.conceptos = a);
   sub('resumenes', a => S.resumenes = a);
   sub('analisis', a => { S.analisis = Object.fromEntries(a.map(x => [x.id, x])); });
+  sub('cierres', a => { S.cierres = Object.fromEntries(a.map(x => [x.id, x])); S.cierresListos = true; renderCierre(); });
   subMovs();
 }
 
@@ -842,14 +862,18 @@ async function imagenBase64(file) {
   cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
   return cv.toDataURL('image/jpeg', 0.85).split(',')[1];
 }
-async function askAI(prompt, { json = false, image = null, signal, onText } = {}) {
+const fileBase64 = f => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = ko; r.readAsDataURL(f); });
+const puedePdf = () => !!(S.sb && CFG.ia);
+async function askAI(prompt, { json = false, image = null, pdf = null, signal, onText } = {}) {
   let sample = null; try { sample = await window.claude?.use?.('sample'); } catch {}
   if (sample) {
+    if (pdf) throw { code: 'pdf_unsupported' };
     const o = { cache: false }; if (signal) o.signal = signal; if (image) o.images = [image]; if (onText) o.onText = onText;
     return json ? sample.json(prompt, o) : (await sample(prompt, o)).text;
   }
   if (S.sb && CFG.ia) {
     const body = { prompt, json }; if (image) body.imagen = { tipo: 'image/jpeg', datos: await imagenBase64(image) };
+    if (pdf) { if (pdf.size > 8e6) throw { code: 'ia_error', message: 'el PDF pesa más de 8 MB' }; body.pdf = { datos: await fileBase64(pdf) }; }
     const { data, error } = await S.sb.functions.invoke('analizar', { body });
     if (signal?.aborted) throw { code: 'cancelled' };
     if (error || !data?.text) throw { code: 'ia_error', message: error?.message || data?.error };
@@ -859,7 +883,7 @@ async function askAI(prompt, { json = false, image = null, signal, onText } = {}
   throw { code: 'no_ia' };
 }
 const IA_OFF = 'El análisis con IA todavía no está activado en esta versión. Se suma en la etapa 2 de la guía.';
-const iaErr = e => e.code === 'cancelled' ? 'Análisis detenido.' : e.code === 'not_granted' ? 'No se dio permiso para usar Claude desde la app.' : e.code === 'rate_limited' ? 'Demasiados pedidos seguidos. Esperá un minuto y probá de nuevo.' : e.code === 'invalid_json' ? 'La IA no devolvió una lista ordenada. Volvé a intentarlo.' : e.code === 'images_unavailable' ? 'Esta vista no permite enviar imágenes. Probá con el PDF.' : e.code === 'no_ia' ? IA_OFF : 'No se pudo completar el análisis' + (e.message ? ': ' + e.message : '.');
+const iaErr = e => e.code === 'pdf_unsupported' ? 'Este PDF no tiene texto legible. Subí una foto o captura.' : e.code === 'cancelled' ? 'Análisis detenido.' : e.code === 'not_granted' ? 'No se dio permiso para usar Claude desde la app.' : e.code === 'rate_limited' ? 'Demasiados pedidos seguidos. Esperá un minuto y probá de nuevo.' : e.code === 'invalid_json' ? 'La IA no devolvió una lista ordenada. Volvé a intentarlo.' : e.code === 'images_unavailable' ? 'Esta vista no permite enviar imágenes. Probá con el PDF.' : e.code === 'no_ia' ? IA_OFF : 'No se pudo completar el análisis' + (e.message ? ': ' + e.message : '.');
 
 /* ---------- resumen bancario ---------- */
 const bankStatus = (msg) => { const b = $('#bankStatus'); b.hidden = !msg; b.textContent = msg || ''; };
@@ -887,7 +911,8 @@ async function handleBank(file) {
   let text = '';
   bankStatus('Leyendo ' + file.name + '…');
   try { if (!isImg) text = await fileToText(file); } catch (e) { bankStatus('No pude leer el archivo. Si es un PDF escaneado, probá subir una foto o captura del resumen.'); return; }
-  if (!isImg && text.replace(/\s/g, '').length < 40) { bankStatus('El PDF no tiene texto legible (parece escaneado). Subí una captura o foto de cada página.'); return; }
+  const escaneado = !isImg && text.replace(/\s/g, '').length < 40;
+  if (escaneado && !puedePdf()) { bankStatus('El PDF no tiene texto legible (parece escaneado). Subí una captura o foto de cada página.'); return; }
   const conceptos = S.conceptos.filter(c => c.tipo !== 'ingreso').map(c => ({ id: c.id, grupo: rubroById(c.rubroId)?.nombre, nombre: c.nombre, tipo: c.naturaleza, presupuesto: presuConcepto(c) }));
   const ingresosC = S.conceptos.filter(c => c.tipo === 'ingreso').map(c => ({ id: c.id, nombre: c.nombre }));
   const prompt = `Sos un asesor de finanzas familiares en Argentina. Te paso un resumen bancario o de tarjeta de una familia (Mati y Belu, con una bebé). Extraé TODOS los movimientos y clasificalos.
@@ -907,12 +932,12 @@ Reglas:
 Respondé SOLO con JSON con esta forma:
 {"banco": string, "periodo": string, "movimientos":[{"fecha":"2026-09-03","descripcion":"MERCADOPAGO*FARMACITY","monto":12345.5,"tipo":"gasto","conceptoId":"id o null","juicio":"revisar","comentario":"..."}], "resumen":"4 a 6 oraciones: total gastado, principales destinos, comparación con el presupuesto, qué recortar", "alertas":["frases cortas sobre comisiones, intereses, impuestos de tarjeta, suscripciones o gastos repetidos"]}
 
-${isImg ? 'El resumen va en la imagen adjunta.' : 'Texto del resumen:\n' + text.slice(0, 180000)}`;
+${isImg ? 'El resumen va en la imagen adjunta.' : escaneado ? 'El resumen va en el PDF adjunto.' : 'Texto del resumen:\n' + text.slice(0, 180000)}`;
   bankCtl = new AbortController();
   bankStatus('Claude está leyendo el resumen. Puede tardar uno o dos minutos…');
   const stop = el('button', {style:'margin-left:10px', onclick: () => bankCtl.abort()}, 'Detener'); $('#bankStatus').append(stop);
   try {
-    const res = await askAI(prompt, { json: true, signal: bankCtl.signal, image: isImg ? file : null });
+    const res = await askAI(prompt, { json: true, signal: bankCtl.signal, image: isImg ? file : null, pdf: escaneado ? file : null });
     if (!res || !Array.isArray(res.movimientos)) throw { code: 'invalid_json' };
     bankStatus('');
     showBankResult(res, file.name);
@@ -965,6 +990,101 @@ function showBankResult(res, fname) {
 }
 dropzone($('#bankDrop'), $('#bankFile'), handleBank);
 
+/* ---------- tickets y facturas ---------- */
+let tkCtl = null;
+function conceptosGasto() { return S.conceptos.filter(c => c.tipo !== 'ingreso' && !c.porcentajeIngreso).map(c => ({ id: c.id, grupo: rubroById(c.rubroId)?.nombre || '', nombre: c.nombre })); }
+async function handleTicket(file) {
+  const box = $('#tkBox');
+  const msg = t => box.replaceChildren(el('p', {class:'note', style:'margin:0 0 14px'}, t));
+  if (!(await iaDisponible())) return msg(IA_OFF);
+  const isImg = /^image\//.test(file.type), isPdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name);
+  if (!isImg && !isPdf) return msg('Ese tipo de archivo no sirve. Subí una foto o un PDF del ticket.');
+  let text = '';
+  if (isPdf) { try { text = await fileToText(file); } catch {} }
+  const escaneado = isPdf && text.replace(/\s/g, '').length < 20;
+  if (escaneado && !puedePdf()) return msg('Ese PDF no tiene texto legible. Sacale una foto o una captura y subila.');
+  const prompt = `Leé este ticket, factura o comprobante de compra de una familia argentina y devolvé los datos para registrarlo como gasto.
+
+Conceptos de gasto disponibles (usá el id exacto): ${JSON.stringify(conceptosGasto())}
+
+Reglas:
+- total: el importe final pagado en pesos, como número (sin separador de miles; usá punto para decimales). null si no se lee.
+- fecha: AAAA-MM-DD. null si no figura.
+- medio: "banco" si se pagó con tarjeta, débito, transferencia, QR o billetera virtual; "efectivo" si dice efectivo; null si no figura.
+- comercio: nombre del comercio o razón social, corto.
+- detalle: qué se compró, en pocas palabras (ej. "carne y pollo", "pañales y leche", "nafta súper").
+- conceptoId: el concepto que corresponde SOLO si el ticket deja claro qué tipo de compra es (por los productos o por el rubro inequívoco del comercio). Si no hay detalle suficiente para saberlo (por ejemplo, un comercio genérico o un comprobante sin ítems), poné null.
+- seguro: true solo si estás seguro del concepto.
+- candidatos: hasta 3 ids de conceptos posibles, del más al menos probable.
+- pregunta: si conceptoId es null o seguro es false, una pregunta corta para la familia (ej. "¿Esta compra en Mercado Libre fue para la bebé o para la casa?"). Si no, "".
+- Si el ticket mezcla rubros (ej. supermercado con comida y limpieza), elegí el concepto del rubro principal y mencioná el resto en detalle.
+
+Respondé SOLO con JSON: {"comercio":"","fecha":"2026-11-02","total":12345.5,"medio":"banco","detalle":"","conceptoId":"id o null","seguro":true,"candidatos":["id"],"pregunta":""}
+
+${isImg ? 'El comprobante va en la imagen adjunta.' : escaneado ? 'El comprobante va en el PDF adjunto.' : 'Texto del comprobante:\n' + text.slice(0, 40000)}`;
+  tkCtl = new AbortController();
+  box.replaceChildren(el('p', {class:'note', style:'margin:0 0 14px'}, 'Leyendo el ticket… ', el('button', {class:'ghost', onclick: () => tkCtl.abort()}, 'Cancelar')));
+  let r;
+  try { r = await askAI(prompt, { json: true, signal: tkCtl.signal, image: isImg ? file : null, pdf: escaneado ? file : null }); }
+  catch (e) { return msg(iaErr(e)); }
+  if (!r || typeof r !== 'object') return msg('No pude leer el ticket. Probá con una foto más nítida y con buena luz.');
+  showTicket(r, file, isImg);
+}
+function showTicket(r, file, isImg) {
+  const box = $('#tkBox');
+  const valido = id => !!conceptoById(id);
+  const cands = [...new Set([r.conceptoId, ...(r.candidatos || [])].filter(valido))].slice(0, 3);
+  const dudoso = !valido(r.conceptoId) || r.seguro === false;
+  const fecha = el('input', {type:'date', id:'tkFecha', value: /^\d{4}-\d{2}-\d{2}$/.test(r.fecha || '') ? r.fecha : today()});
+  const monto = el('input', {class:'num', id:'tkMonto', inputmode:'decimal', value: r.total ? Math.round(+r.total * 100) / 100 : '', placeholder:'0'});
+  const desc = el('input', {id:'tkDesc', value: [r.comercio, r.detalle].filter(Boolean).join(' · ')});
+  const medio = el('select', {id:'tkMedio'}, el('option', {value:'', disabled:true, selected: !r.medio}, 'Elegí…'), el('option', {value:'banco', selected: r.medio === 'banco'}, 'Tarjeta / banco'), el('option', {value:'efectivo', selected: r.medio === 'efectivo'}, 'Efectivo'));
+  const quien = el('select', {id:'tkQuien'}, ...['Mati', 'Belu', 'Familia'].map(q => el('option', {selected: q === $('#mPersona').value}, q)));
+  const concepto = el('select', {id:'tkConcepto'}); conceptOptions(concepto, 'gasto', dudoso ? '' : r.conceptoId);
+  concepto.prepend(el('option', {value:'', disabled:true, selected: dudoso}, 'Elegí el concepto…'));
+  const chips = el('div', {class:'chips'}, ...cands.map(id => { const c = conceptoById(id); const b = el('button', {type:'button', 'aria-pressed': String(!dudoso && id === r.conceptoId), onclick: () => { concepto.value = id; sync(); }}, c.nombre); b.dataset.id = id; return b; }));
+  const sync = () => chips.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === concepto.value)));
+  concepto.onchange = sync;
+  const ask = dudoso ? el('div', {class:'ask wide'}, el('b', {}, r.pregunta || 'El ticket no deja claro qué tipo de compra es. ¿En qué concepto lo cargamos?'), cands.length ? chips : '', el('label', {class:'f'}, 'Concepto', concepto))
+                     : el('label', {class:'f wide'}, 'Concepto', concepto, cands.length > 1 ? el('div', {style:'margin-top:6px'}, chips) : '');
+  const err = el('p', {class:'small', style:'margin:0;color:var(--bad)'});
+  const save = el('button', {class:'primary', onclick: async () => {
+    const m = parseMonto(monto.value);
+    if (!concepto.value) return err.textContent = 'Elegí en qué concepto va esta compra.';
+    if (!m) return err.textContent = 'Poné el monto total del ticket.';
+    if (!medio.value) return err.textContent = 'Elegí cómo se pagó.';
+    save.disabled = true;
+    try {
+      await S.db.collection('movimientos').add({ fecha: fecha.value, tipo: 'gasto', conceptoId: concepto.value, descripcion: desc.value.trim(), monto: m, medio: medio.value, persona: quien.value, origen: 'ticket', creado: Date.now() });
+      box.replaceChildren(el('p', {class:'note', style:'margin:0 0 14px'}, 'Guardado: ' + fmt(m) + ' en ' + conceptoById(concepto.value).nombre + '.'));
+      toast('Ticket cargado');
+    } catch (e) { save.disabled = false; err.textContent = errMsg(e); }
+  }}, 'Guardar gasto');
+  const thumb = isImg ? el('img', {src: URL.createObjectURL(file), alt:'Ticket'}) : el('div', {class:'doc'}, 'PDF');
+  box.replaceChildren(el('div', {class:'ticket'}, thumb, el('div', {style:'display:flex;flex-direction:column;gap:12px;min-width:0'},
+    el('div', {class:'ticket-fields'},
+      el('label', {class:'f'}, 'Fecha', fecha), el('label', {class:'f'}, 'Monto (ARS)', monto),
+      el('label', {class:'f wide'}, 'Detalle', desc),
+      el('label', {class:'f'}, 'Medio', medio), el('label', {class:'f'}, 'Quién', quien),
+      ask),
+    err, el('div', {class:'toolbar'}, save, el('button', {class:'ghost', onclick: () => box.replaceChildren()}, 'Descartar')))));
+}
+['#tkCam', '#tkFile'].forEach(id => $(id).addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) handleTicket(f); }));
+
+/* ---------- cierre de mes: copia de seguridad ---------- */
+function renderCierre() {
+  const b = $('#cierreBanner');
+  if (!S.db || !S.cierresListos) { b.hidden = true; return; }
+  const prev = addMonths(ym(today()), -1);
+  const hayDatos = S.movs.some(m => ym(m.fecha) === prev);
+  if (!hayDatos || S.cierres?.[prev] || S.cierreOculto === prev) { b.hidden = true; return; }
+  b.hidden = false;
+  const btn = el('button', {class:'primary', onclick: async () => { btn.disabled = true; const ok = await descargarCopia('cierre-' + prev); btn.disabled = false; if (ok) { await setDoc('cierres/' + prev, { fecha: new Date().toISOString(), tipo: 'descarga' }).catch(() => {}); toast('Copia de ' + monthName(prev) + ' descargada'); } }}, 'Descargar copia de ' + monthName(prev).split(' ')[0]);
+  b.replaceChildren(
+    el('div', {}, el('b', {}, 'Cerró ' + monthName(prev) + '.'), el('p', {}, 'Descargá la copia de seguridad del mes y guardala en tu computadora o en Drive. Si algún día la app tiene un problema, se restaura desde Importar Excel → Copia de seguridad.')),
+    el('div', {class:'toolbar'}, btn, el('button', {class:'ghost', onclick: () => { S.cierreOculto = prev; renderCierre(); }}, 'Más tarde')));
+}
+
 /* ---------- análisis del mes ---------- */
 let aiRunning = false, aiCtl = null;
 $('#aiBtn').onclick = async () => {
@@ -1001,21 +1121,23 @@ $('#aiStop').onclick = () => aiCtl?.abort();
 /* ---------- descargar archivos ---------- */
 async function guardarArchivo(filename, blob) {
   let dl = null; try { dl = await window.claude?.use?.('downloads'); } catch {}
-  if (dl) { try { await dl.save({ filename, data: blob }); } catch (e) { if (e?.code !== 'declined' && e?.code !== 'cancelled') toast('No se pudo descargar'); } return; }
+  if (dl) { try { await dl.save({ filename, data: blob }); return true; } catch (e) { if (e?.code !== 'declined' && e?.code !== 'cancelled') toast('No se pudo descargar'); return false; } }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.append(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  return true;
 }
 async function leerTodo(col) {
   if (S.db?.all) return S.db.all(col);
   const snap = await S.db.collection(col).limit(1000).get();
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
-$('#backupBtn').onclick = async () => {
-  if (!S.db) return toast('Todavía no hay datos cargados');
+async function descargarCopia(etiqueta) {
+  if (!S.db) { toast('Todavía no hay datos cargados'); return false; }
   const out = { app: 'finanzas-kulifay', version: 1, fecha: new Date().toISOString(), datos: {} };
   for (const c of COLS) out.datos[c] = await leerTodo(c);
-  await guardarArchivo('finanzas-kulifay-copia-' + today() + '.json', new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }));
-};
+  return guardarArchivo('finanzas-kulifay-' + etiqueta + '.json', new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }));
+}
+$('#backupBtn').onclick = () => descargarCopia('copia-' + today());
 $('#restoreFile').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   const box = $('#restoreMsg');
