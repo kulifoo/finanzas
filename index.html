@@ -528,11 +528,8 @@ let unsubMovs = null;
 const rubroById = id => S.rubros.find(r => r.id === id);
 const conceptoById = id => S.conceptos.find(c => c.id === id);
 const rubrosOrd = () => [...S.rubros].sort((a,b) => (a.orden ?? 99) - (b.orden ?? 99) || a.nombre.localeCompare(b.nombre));
-// Base de ingresos por medio: lo ingresado en el mes si ya hay ingresos cargados; si no, lo esperado
+// Base de ingresos por medio para el presupuesto: siempre lo esperado (el presupuesto no se mezcla con los movimientos)
 const ingresosBase = (field, k = S.month) => {
-  const medio = field === 'presupuestoEfectivo' ? 'efectivo' : 'banco';
-  const real = S.movs.filter(m => m.tipo === 'ingreso' && !esUSD(m) && (m.medio || 'banco') === medio && ym(m.fecha) === k).reduce((s,m) => s + m.monto, 0);
-  if (real > 0) return { monto: real, real: true };
   return { monto: S.conceptos.filter(c => c.tipo === 'ingreso').reduce((s,c) => s + (+c[field] || 0), 0), real: false };
 };
 const cuotaActiva = (c, k = S.month) => { if (!c.cuotasTotal || !c.cuotaInicio) return true; const [ay, am] = c.cuotaInicio.split('-').map(Number), [by, bm] = k.split('-').map(Number); const n = (by - ay) * 12 + (bm - am) + 1; return n >= 1 && n <= c.cuotasTotal; };
@@ -540,7 +537,7 @@ const presuField = (c, field, k) => c.porcentajeIngreso ? ingresosBase(field, k)
 const presuConcepto = (c, k) => presuField(c, 'presupuestoBanco', k) + presuField(c, 'presupuestoEfectivo', k);
 function diezmo(k = S.month) {
   const c = S.conceptos.find(x => x.porcentajeIngreso); if (!c) return null;
-  const debe = presuConcepto(c, k);
+  const debe = S.movs.filter(m => m.tipo === 'ingreso' && !esUSD(m) && ym(m.fecha) === k).reduce((s,m) => s + m.monto, 0) * c.porcentajeIngreso / 100;
   const dado = S.movs.filter(m => m.tipo === 'gasto' && !esUSD(m) && m.conceptoId === c.id && ym(m.fecha) === k).reduce((s,m) => s + m.monto, 0);
   return { c, debe, dado, pct: c.porcentajeIngreso };
 }
@@ -951,30 +948,23 @@ function renderPresu() {
     el('div', {style:'align-items:flex-end'}, el('span', {class:'label'}, 'Margen'), el('b', {class: totI - totG < 0 ? 'neg' : 'pos', style:'font-size:17px'}, signed(totI - totG))));
   if (!S.rubros.length) { list.replaceChildren(el('div', {class:'list-card'}, el('div', {class:'empty'}, 'Todavía no hay grupos. Importá tu Excel desde Más o creá un grupo.'))); return; }
   if (list.contains(document.activeElement) && ['INPUT','SELECT'].includes(document.activeElement.tagName)) return;
-  const st = stats(S.month), real = Object.fromEntries(st.rows.map(r => [r.rubro.id, r.real]));
   list.replaceChildren(...rubrosOrd().map(r => {
     const cs = S.conceptos.filter(c => c.rubroId === r.id).sort((a,b) => (a.orden ?? 99) - (b.orden ?? 99) || a.nombre.localeCompare(b.nombre));
     const ing = r.tipo === 'ingreso';
     const presu = cs.reduce((s,c) => s + presuConcepto(c), 0);
-    const gast = ing ? st.i : (real[r.id] || 0);
     const dz = cs.find(c => c.porcentajeIngreso);
-    const over = !ing && !dz && presu > 0 && gast > presu;
-    let state;
-    if (dz) { const d = diezmo(); const falta = d ? d.debe - d.dado : 0; state = falta > 1 ? el('span', {class:'pill-due num'}, 'Faltan ' + fmt(falta)) : el('span', {class:'pill-ok'}, '✓ Al día'); }
-    else if (ing) state = el('span', {class:'rstate pos'}, fmt(gast));
-    else if (!presu) state = el('span', {class:'rstate muted'}, gast ? fmt(gast) : 'Sin tope');
-    else if (over) state = el('span', {class:'rstate neg'}, '▲ ' + fmt(gast - presu));
-    else state = el('span', {class:'rstate pos'}, 'quedan ' + fmt(presu - gast));
-    const sub = dz ? dz.porcentajeIngreso + '% de los ingresos · automático' : ing ? 'Esperado ' + fmt(presu) : presu ? fmt(gast) + ' de ' + fmt(presu) : cs.length + ' conceptos';
+    const over = false;
+    const state = presu ? el('span', {class:'rstate' + (ing ? ' pos' : '')}, fmt(presu)) : el('span', {class:'rstate muted'}, 'Sin monto');
+    const sub = dz ? dz.porcentajeIngreso + '% de los ingresos esperados' : ing ? 'Esperado por mes' : cs.length + (cs.length === 1 ? ' concepto' : ' conceptos');
     const head = el('div', {class:'rhead'}, el('span', {class:'mic' + (over ? ' bad' : '') + (ing ? ' in' : '')}, icoEl(iconKey(r))), el('div', {class:'mtx'}, el('b', {}, r.nombre), el('span', {class:'num'}, sub)), state);
-    const bar = (!ing && !dz && presu > 0) ? el('div', {class:'pbar'}, el('i', {style:'width:' + Math.min(100, gast / presu * 100) + '%'})) : '';
+    const bar = '';
     const rows = cs.map(c => {
       const money = field => { const i = el('input', {class:'num', inputmode:'decimal', id:'p-' + c.id + '-' + field, value: c[field] ? Math.round(c[field]).toLocaleString('es-AR') : '', placeholder:'0'}); i.addEventListener('change', () => upd('conceptos/' + c.id, { [field]: parseMonto(i.value) })); return i; };
       const name = el('input', {value: c.nombre, 'aria-label':'Nombre del concepto', id:'n-' + c.id}); name.addEventListener('change', () => name.value.trim() && upd('conceptos/' + c.id, { nombre: name.value.trim() }));
       const delb = el('button', {class:'ghost', 'aria-label':'Borrar ' + c.nombre, onclick: () => askDelete(delb, 'conceptos/' + c.id)}, icoEl('trash'));
       const nat = ing ? '' : el('label', {class:'f', style:'grid-column:1/-1'}, 'Tipo de gasto', el('select', {id:'nat-' + c.id, class:'tag-' + (c.naturaleza || ''), onchange: e => upd('conceptos/' + c.id, { naturaleza: e.target.value })}, ...Object.entries(NAT).map(([k,v]) => el('option', {value:k, selected: c.naturaleza === k}, v))));
       if (c.porcentajeIngreso) {
-        const auto = (f, t) => { const b = ingresosBase(f); return el('div', {class:'f'}, t, el('div', {class:'auto'}, fmt(presuField(c, f)), el('small', {}, c.porcentajeIngreso + '% de ' + fmt(b.monto) + (b.real ? ' ingresado' : ' esperado')))); };
+        const auto = (f, t) => { const b = ingresosBase(f); return el('div', {class:'f'}, t, el('div', {class:'auto'}, fmt(presuField(c, f)), el('small', {}, c.porcentajeIngreso + '% de ' + fmt(b.monto) + ' esperado'))); };
         const pct = el('input', {class:'num', inputmode:'decimal', id:'pct-' + c.id, 'aria-label':'Porcentaje de los ingresos', value: c.porcentajeIngreso, style:'width:72px'});
         pct.addEventListener('change', () => { const v = parseMonto(pct.value); if (v > 0 && v <= 100) upd('conceptos/' + c.id, { porcentajeIngreso: v }); });
         return el('div', {class:'crow'}, el('div', {class:'cname'}, name, delb), auto('presupuestoBanco', 'Tarjeta / banco'), auto('presupuestoEfectivo', 'Efectivo'), el('label', {class:'f', style:'grid-column:1/-1;flex-direction:row;align-items:center;gap:8px'}, 'Siempre el', pct, '% de los ingresos'), nat);
