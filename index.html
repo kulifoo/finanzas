@@ -839,14 +839,18 @@ function renderMovs() {
   const open = new Set([...box.querySelectorAll('details.mov[open]')].map(d => d.dataset.id));
   const hoy = today(), ayer = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return isoLocal(d); })();
   const dayLabel = f => f === hoy ? 'Hoy' : f === ayer ? 'Ayer' : new Date(f + 'T12:00').toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short' });
-  const days = {}; for (const m of ms) (days[m.fecha] ||= []).push(m);
-  box.replaceChildren(...Object.entries(days).map(([fecha, arr]) => {
+  const fijos = ms.filter(m => m.origen === 'automatico').sort((a,b) => (conceptoById(a.conceptoId)?.nombre || '').localeCompare(conceptoById(b.conceptoId)?.nombre || ''));
+  const resto = ms.filter(m => m.origen !== 'automatico');
+  const movItem = m => el('details', {class:'mov', 'data-id': m.id, open: open.has(m.id)}, el('summary', {}, movRow(m)), m.tipo === 'cambio' ? cambioEditor(m) : movEditor(m));
+  const secFijos = fijos.length ? [el('div', {class:'sec', style:'gap:8px'},
+    el('div', {class:'day-h', style:'text-transform:none;color:var(--ink);font-size:15px;font-weight:800'}, el('span', {}, 'Gastos fijos'), el('span', {class:'num'}, signed(-fijos.reduce((s,m) => s + m.monto, 0)))),
+    el('div', {class:'list-card'}, ...fijos.map(movItem)))] : [];
+  const days = {}; for (const m of resto) (days[m.fecha] ||= []).push(m);
+  box.replaceChildren(...secFijos, ...Object.entries(days).map(([fecha, arr]) => {
     const tot = arr.filter(m => !esUSD(m)).reduce((s,m) => s + (m.tipo === 'gasto' ? -m.monto : m.monto), 0);
     return el('div', {class:'sec', style:'gap:8px'},
       el('div', {class:'day-h'}, el('span', {}, dayLabel(fecha)), el('span', {class:'num' + (tot > 0 ? ' pos' : '')}, signed(tot))),
-      el('div', {class:'list-card'}, ...arr.map(m => {
-        return el('details', {class:'mov', 'data-id': m.id, open: open.has(m.id)}, el('summary', {}, movRow(m)), m.tipo === 'cambio' ? cambioEditor(m) : movEditor(m));
-      })));
+      el('div', {class:'list-card'}, ...arr.map(movItem)));
   }));
 }
 function movEditor(m) {
