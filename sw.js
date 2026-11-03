@@ -1,6 +1,6 @@
 // Service worker de Finanzas Kulifay.
 // Cuando cambies la app, subí el número de VERSION para que los celulares descarguen la nueva.
-const VERSION = 'fk-v3';
+const VERSION = 'fk-v6';
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 const CDN = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

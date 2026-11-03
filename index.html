@@ -122,7 +122,16 @@ section.view{display:flex;flex-direction:column;gap:20px;padding-top:14px}
 details.mov > summary{list-style:none;cursor:pointer}
 details.mov > summary::-webkit-details-marker{display:none}
 details.mov[open] .mrow{border-bottom-color:transparent}
-.mov-edit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:0 0 12px 54px;border-bottom:1px solid var(--line)}
+.mov-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end;padding:2px 0 14px;border-bottom:1px solid var(--line)}
+.mov-edit .wide{grid-column:1/-1}
+.mov-edit input,.mov-edit select{background:var(--bg)}
+.mov-edit .acts{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chk{display:flex!important;flex-direction:row!important;align-items:center;gap:10px;font-size:13px!important;color:var(--ink-2)!important}
+.chk input{width:20px;height:20px;accent-color:var(--accent);flex:none}
+.cuotas{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:end}
+.cuotas small{grid-column:1/-1;color:var(--ink-3);font-size:12px}
+.cmp td.r,.cmp th.r{white-space:nowrap}
+.cmp tfoot td{font-weight:800;border-bottom:0}
 .list-card > details.mov:last-child .mov-edit{border-bottom:0}
 .day-h{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--ink-3);padding:0 4px;text-transform:capitalize}
 .search{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:16px;padding:0 14px;height:50px;color:var(--ink-3)}
@@ -241,6 +250,53 @@ nav.bottom .fab:hover{background:var(--accent-2)}
 .tooltip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;padding:6px 9px;border-radius:8px;z-index:50;max-width:260px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(100px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:14px;font-size:14px;font-weight:600;z-index:60;max-width:calc(100% - 32px)}
 #login form{max-width:380px;margin:48px auto;display:flex;flex-direction:column;gap:14px}
+.side-brand,.side-only,.fab-txt{display:none}
+
+/* ===== Escritorio: menú lateral y grillas ===== */
+@media (min-width:1024px){
+  body:has(nav.bottom:not([hidden])){padding-left:248px}
+  .wrap{max-width:1180px;padding-left:max(32px,env(safe-area-inset-left,0px));padding-right:max(32px,env(safe-area-inset-right,0px))}
+  header.top{padding-block:28px 4px}
+  main.wrap{padding-bottom:48px}
+  nav.bottom{left:0;top:0;bottom:0;transform:none;width:248px;height:auto;border-radius:0;border:0;border-right:1px solid var(--line);box-shadow:none;display:flex;flex-direction:column;align-items:stretch;justify-items:stretch;gap:4px;padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+  nav.bottom .side-brand{display:flex;align-items:center;gap:10px;padding:0 10px 22px;order:0;font-size:16px}
+  nav.bottom .side-brand .mark{width:32px;height:32px;border-radius:10px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800}
+  nav.bottom button{flex-direction:row;justify-content:flex-start;gap:12px;font-size:14.5px;font-weight:600;padding:12px 14px;border-radius:14px;order:2;color:var(--ink-2)}
+  nav.bottom button:hover{background:var(--surface-2);color:var(--ink)}
+  nav.bottom button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+  nav.bottom .side-only{display:flex}
+  nav.bottom .fab{order:1;width:auto;height:48px;border-radius:99px;justify-content:center;margin-bottom:18px;color:var(--accent-ink);font-weight:700}
+  nav.bottom .fab:hover{background:var(--accent-2);color:var(--accent-ink)}
+  nav.bottom .fab .fab-txt{display:inline}
+  section.view{gap:24px}
+  /* inicio */
+  #v-inicio{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-areas:"cierre cierre" "hero recent" "quick recent" "leaks recent";align-items:start;column-gap:28px}
+  #cierreBanner{grid-area:cierre} #hero{grid-area:hero} #v-inicio .quick{grid-area:quick} .home-leaks{grid-area:leaks} .home-recent{grid-area:recent;grid-row:2 / span 3}
+  .hero .big{font-size:52px}
+  .quick button span{width:64px;height:64px}
+  /* movimientos */
+  #v-movs{display:grid;grid-template-columns:minmax(0,1fr) 280px;column-gap:16px;align-items:center}
+  #v-movs h1,#v-movs .pills,#v-movs #movList{grid-column:1 / -1}
+  #v-movs .search{grid-column:1}
+  #v-movs #fRubro{grid-column:2;height:50px}
+  .pills{margin:0;padding:0;flex-wrap:wrap}
+  #movList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+  /* presupuesto */
+  #rubroList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  /* análisis */
+  #v-analisis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  #v-analisis > h1{grid-column:1 / -1}
+  #anaTiles{grid-template-columns:minmax(0,1fr);height:100%}
+  /* más y banco */
+  #v-ajustes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  #v-ajustes > .back{grid-column:1 / -1}
+  #v-banco{max-width:900px}
+  /* hoja de carga como ventana */
+  .sheet{top:50%;bottom:auto;transform:translate(-50%,-50%);border-radius:28px;max-height:88vh;width:min(560px,calc(100% - 64px));padding:20px 28px 28px}
+  .sheet .grab{display:none}
+  .toast{bottom:32px}
+}
+@media (min-width:1024px) and (max-width:1199px){ #movList{grid-template-columns:minmax(0,1fr)} }
 @media (prefers-reduced-motion:no-preference){.pbar i,.bar-fill,.hero .track i{transition:width .4s ease}}
 </style>
 
@@ -285,11 +341,11 @@ nav.bottom .fab:hover{background:var(--accent-2)}
       <button data-act="banco"><span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 13h6M9 17h6"/></svg></span>Resumen</button>
       <button data-act="analizar"><span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></span>Analizar</button>
     </div>
-    <div class="sec">
+    <div class="sec home-leaks">
       <div class="sec-h"><h2>Posibles fugas</h2><button class="link" data-go="analisis">Ver análisis</button></div>
       <div id="leaksHome" class="leak-cards"></div>
     </div>
-    <div class="sec">
+    <div class="sec home-recent">
       <div class="sec-h"><h2>Últimos movimientos</h2><button class="link" data-go="movs">Ver todos</button></div>
       <div id="recent" class="list-card"></div>
     </div>
@@ -305,6 +361,7 @@ nav.bottom .fab:hover{background:var(--accent-2)}
       <button data-f="efectivo" aria-pressed="false">Efectivo</button>
       <button data-f="ticket" aria-pressed="false">Tickets</button>
       <button data-f="resumen" aria-pressed="false">Resumen</button>
+      <button data-f="automatico" aria-pressed="false">Fijos</button>
       <button data-f="ingreso" aria-pressed="false">Ingresos</button>
     </div>
     <select id="fRubro" aria-label="Filtrar por grupo"><option value="">Todos los grupos</option></select>
@@ -319,6 +376,7 @@ nav.bottom .fab:hover{background:var(--accent-2)}
       <button type="submit" class="primary">Crear</button>
     </form>
     <div id="presuTot" class="presu-sum"></div>
+    <div class="note" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span>Los gastos fijos (servicios, suscripciones, cuotas, patente, seguro) se cargan solos como movimientos al empezar cada mes. Marcalos en cada concepto con «Se carga solo cada mes».</span><button id="autoBtn">Cargar fijos ahora</button></div>
     <div id="rubroList" class="sec" style="gap:10px"></div>
     <p class="small muted" style="margin:0">Tocá un grupo para editar sus montos y conceptos. Los cambios se guardan al salir de cada casilla.</p>
   </section>
@@ -335,6 +393,10 @@ nav.bottom .fab:hover{background:var(--accent-2)}
     <div class="panel">
       <div class="panel-h"><h2>Qué tan necesario fue el gasto</h2></div>
       <div id="natureBar"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h2>Real contra presupuesto</h2><span class="small muted" id="cmpTot"></span></div>
+      <div class="tbl-wrap"><table class="cmp" id="cmpTable"></table></div>
     </div>
     <div class="panel">
       <div class="panel-h"><h2>Dónde se va la plata</h2></div>
@@ -399,11 +461,13 @@ nav.bottom .fab:hover{background:var(--accent-2)}
 </main>
 
 <nav class="bottom" aria-label="Secciones">
+  <div class="side-brand"><span class="mark">K</span><b>Finanzas Kulifay</b></div>
   <button data-go="inicio" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</button>
   <button data-go="movs"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Movimientos</button>
-  <button class="fab" id="fab" aria-label="Cargar movimiento"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px;stroke-width:2.4"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="fab" id="fab" aria-label="Cargar movimiento"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px;stroke-width:2.4"><path d="M12 5v14M5 12h14"/></svg><span class="fab-txt">Cargar movimiento</span></button>
   <button data-go="presu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>Presupuesto</button>
   <button data-go="analisis"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Análisis</button>
+  <button data-go="ajustes" class="side-only"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>Más</button>
 </nav>
 
 <div class="sheet-bg" id="sheetBg" hidden></div>
@@ -461,7 +525,8 @@ const ingresosBase = (field, k = S.month) => {
   if (real > 0) return { monto: real, real: true };
   return { monto: S.conceptos.filter(c => c.tipo === 'ingreso').reduce((s,c) => s + (+c[field] || 0), 0), real: false };
 };
-const presuField = (c, field, k) => c.porcentajeIngreso ? ingresosBase(field, k).monto * c.porcentajeIngreso / 100 : (+c[field] || 0);
+const cuotaActiva = (c, k = S.month) => { if (!c.cuotasTotal || !c.cuotaInicio) return true; const [ay, am] = c.cuotaInicio.split('-').map(Number), [by, bm] = k.split('-').map(Number); const n = (by - ay) * 12 + (bm - am) + 1; return n >= 1 && n <= c.cuotasTotal; };
+const presuField = (c, field, k) => c.porcentajeIngreso ? ingresosBase(field, k).monto * c.porcentajeIngreso / 100 : cuotaActiva(c, k || S.month) ? (+c[field] || 0) : 0;
 const presuConcepto = (c, k) => presuField(c, 'presupuestoBanco', k) + presuField(c, 'presupuestoEfectivo', k);
 function diezmo(k = S.month) {
   const c = S.conceptos.find(x => x.porcentajeIngreso); if (!c) return null;
@@ -522,8 +587,9 @@ function setMe(email) {
 /* ---------- render: inicio ---------- */
 function movRow(m) {
   const c = conceptoById(m.conceptoId), r = c && rubroById(c.rubroId), ing = m.tipo === 'ingreso';
-  const sub = el('span', {}, [m.descripcion, m.medio === 'efectivo' ? 'Efectivo' : 'Tarjeta', m.persona].filter(Boolean).join(' · '));
-  if (m.origen === 'ticket' || m.origen === 'resumen') sub.append(' ', el('span', {class:'chip'}, m.origen));
+  const sub = el('span', {}, [m.medio === 'efectivo' ? 'Efectivo' : (ing ? 'Banco' : 'Tarjeta / banco'), m.persona].filter(Boolean).join(' · '));
+  const chipTxt = { ticket:'ticket', resumen:'resumen', automatico:'fijo', ofrenda:'automática' }[m.origen];
+  if (chipTxt) sub.append(' ', el('span', {class:'chip'}, chipTxt));
   return el('div', {class:'mrow'},
     el('span', {class:'mic' + (ing ? ' in' : '')}, icoEl(ing ? 'in' : iconKey(r))),
     el('div', {class:'mtx'}, el('b', {}, c?.nombre || 'Sin clasificar'), sub),
@@ -531,23 +597,17 @@ function movRow(m) {
 }
 function renderHome() {
   const st = stats(S.month), hoy = ym(today());
+  const porMedio = (arr, med) => arr.filter(m => (m.medio || 'banco') === med).reduce((s, m) => s + m.monto, 0);
+  const banco = porMedio(st.ingresos, 'banco') - porMedio(st.gastos, 'banco');
+  const efectivo = porMedio(st.ingresos, 'efectivo') - porMedio(st.gastos, 'efectivo');
+  const bal = st.i - st.g;
   const hero = $('#hero');
-  let cls = 'hero', lbl, big, pct = null, sub;
-  if (st.presuG > 0) {
-    const rest = st.presuG - st.g; pct = Math.round(st.g / st.presuG * 100);
-    if (rest >= 0) { lbl = 'Te quedan para gastar'; big = fmt(rest); } else { cls += ' over'; lbl = 'Te pasaste del presupuesto'; big = fmt(-rest); }
-    const [y, m] = S.month.split('-').map(Number);
-    const tail = S.month === hoy ? ' · faltan ' + (new Date(y, m, 0).getDate() - new Date().getDate()) + ' días' : S.month < hoy ? ' · mes cerrado' : ' · mes por venir';
-    sub = pct + '% del presupuesto usado' + tail;
-  } else {
-    const bal = st.i - st.g;
-    lbl = bal < 0 ? 'Déficit del mes' : 'Sobrante del mes'; big = fmt(Math.abs(bal)); if (bal < 0) cls += ' over';
-    sub = 'Cargá el presupuesto para ver cuánto les queda por gastar';
-  }
-  hero.className = cls;
-  const track = pct == null ? '' : el('div', {class:'track'}, el('i', {style:'width:' + Math.min(100, pct) + '%'}));
-  hero.replaceChildren(el('span', {class:'lbl'}, lbl), el('span', {class:'big'}, big), track, el('span', {class:'sub'}, sub),
-    el('div', {class:'tiles'}, el('div', {class:'tile'}, el('span', {}, 'Ingresos'), el('b', {}, fmt(st.i))), el('div', {class:'tile'}, el('span', {}, 'Gastos'), el('b', {}, fmt(st.g)))));
+  hero.className = 'hero' + (bal < 0 ? ' over' : '');
+  const lbl = S.month === hoy ? 'Balance en tiempo real' : 'Balance de ' + monthName(S.month).split(' ')[0];
+  const tile = (t, v, i, g) => el('div', {class:'tile'}, el('span', {}, t), el('b', {}, signed(v)), el('span', {style:'font-size:11px;font-weight:600;opacity:.65'}, '+' + fmtShort(i) + ' / −' + fmtShort(g)));
+  hero.replaceChildren(el('span', {class:'lbl'}, lbl), el('span', {class:'big'}, signed(bal)),
+    el('span', {class:'sub'}, 'Entraron ' + fmt(st.i) + ' · salieron ' + fmt(st.g)),
+    el('div', {class:'tiles'}, tile('Banco y tarjeta', banco, porMedio(st.ingresos, 'banco'), porMedio(st.gastos, 'banco')), tile('Efectivo', efectivo, porMedio(st.ingresos, 'efectivo'), porMedio(st.gastos, 'efectivo'))));
   // fugas resumidas
   const L = leaks(); const top = [...L.filter(l => l.lvl !== 'info'), ...L.filter(l => l.lvl === 'info')].slice(0, 2);
   const tagTxt = { bad:'▲ Se pasó', warn:'~ Revisar', info:'i Dato' };
@@ -654,6 +714,75 @@ function renderAI() {
   else if (!aiRunning) $('#aiOut').textContent = 'La IA revisa los movimientos del mes contra el presupuesto, señala qué genera el déficit y propone recortes concretos. El análisis queda guardado para los dos.';
 }
 
+/* ---------- "Cuota 1..6" pasa a "Pago en cuotas" (una sola vez) ---------- */
+function migrarCuotas() {
+  if (S.migrado || !S.rubrosListos || !S.conceptosListos || !S.db) return; S.migrado = true;
+  for (const c of S.conceptos) { const mm = /^Cuota (\d+)$/.exec(c.nombre || ''); if (c.rubroId === 'cuotas' && mm) upd('conceptos/' + c.id, { nombre: 'Pago en cuotas ' + mm[1] }); }
+  const r = rubroById('cuotas'); if (r && r.nombre === 'Cuotas') upd('rubros/cuotas', { nombre: 'Pagos en cuotas' });
+  nuevosGrupos();
+}
+// Grupos agregados después: se crean una sola vez (si después los borran, no vuelven)
+async function nuevosGrupos() {
+  if (!S.autocargaLista) { setTimeout(nuevosGrupos, 800); return; }
+  if (S.autocarga?.['grupos-v2']) return;
+  const G = [['infraestructura','Gastos en infraestructura',10,[['infraestructura','Arreglos y mejoras de la casa','flexible']]],
+             ['bienes','Gastos de bienes',11,[['bienes','Compra de bienes','flexible']]],
+             ['salidas','Salidas y deliverys',12,[['salidas','Salidas','prescindible'],['delivery','Delivery','prescindible']]],
+             ['varios','Varios',13,[['varios','Varios','flexible']]]];
+  try {
+    for (const [rid, nombre, orden, cs] of G) {
+      if (!rubroById(rid)) await S.db.doc('rubros/' + rid).set({ nombre, tipo: 'gasto', orden });
+      for (const [cid, cn, nat] of cs) if (!conceptoById(cid)) await S.db.doc('conceptos/' + cid).set({ rubroId: rid, nombre: cn, tipo: 'gasto', presupuestoBanco: 0, presupuestoEfectivo: 0, naturaleza: nat, orden: 1, fijo: false });
+    }
+    await S.db.doc('autocarga/grupos-v2').set({ fecha: new Date().toISOString() });
+  } catch (e) { console.warn(e); }
+}
+
+/* ---------- gastos fijos automáticos ---------- */
+const FIJOS_DEF = new Set(['tel-mati','tel-belu','luz','agua','gas','medico','paramount','hbo','nube','adobe','claude','patente','seguro-auto','monotributo']);
+const esFijo = c => c.tipo !== 'ingreso' && !c.porcentajeIngreso && (c.fijo ?? (FIJOS_DEF.has(c.id) || ['servicios','suscripciones','cuotas'].includes(c.rubroId)));
+const mesesEntre = (a, b) => { const [ay, am] = a.split('-').map(Number), [by, bm] = b.split('-').map(Number); return (by - ay) * 12 + (bm - am); };
+const cuotaDelMes = (c, k) => c.cuotaInicio ? mesesEntre(c.cuotaInicio, k) + 1 : null;
+async function autoCargar(force = false) {
+  if (S.autoRunning || !S.db || !S.conceptosListos || !S.movsListos || !S.autocargaLista) return;
+  const k = ym(today());
+  if (!force && (S.autocarga?.[k] || S.autoHecho === k)) return;
+  if (addMonths(S.month, -5) > k) return;
+  S.autoRunning = true; let n = 0;
+  try {
+    for (const c of S.conceptos) {
+      if (!esFijo(c)) continue;
+      let cuota = null;
+      if (c.cuotasTotal && c.cuotaInicio) { cuota = cuotaDelMes(c, k); if (cuota < 1 || cuota > c.cuotasTotal) continue; }
+      for (const [field, medio] of [['presupuestoBanco', 'banco'], ['presupuestoEfectivo', 'efectivo']]) {
+        const monto = +c[field] || 0; if (!monto) continue;
+        const id = 'auto-' + k + '-' + c.id + '-' + medio;
+        if (S.movs.some(m => m.id === id)) continue;
+        await S.db.doc('movimientos/' + id).set({ fecha: k + '-01', tipo: 'gasto', conceptoId: c.id, descripcion: cuota ? 'Cuota ' + cuota + ' de ' + c.cuotasTotal : '', monto, medio, persona: 'Familia', origen: 'automatico', creado: Date.now() });
+        n++;
+      }
+    }
+    S.autoHecho = k;
+    await S.db.doc('autocarga/' + k).set({ fecha: new Date().toISOString(), cantidad: n }).catch(() => {});
+    if (force || n) toast(n ? 'Se cargaron ' + n + ' gastos fijos de ' + monthName(k).split(' ')[0] : 'Los gastos fijos del mes ya estaban cargados');
+  } catch (e) { console.warn(e); }
+  finally { S.autoRunning = false; }
+}
+function renderCmp() {
+  const st = stats(S.month);
+  const rows = st.rows.filter(r => r.real || r.presu).sort((a, b) => b.presu - a.presu || b.real - a.real);
+  const t = $('#cmpTable');
+  if (!rows.length) { t.replaceChildren(el('tbody', {}, el('tr', {}, el('td', {class:'muted'}, 'Sin presupuesto ni gastos este mes.')))); $('#cmpTot').textContent = ''; return; }
+  const dif = r => r.presu - r.real;
+  const cell = r => { const d = dif(r); return !r.presu ? el('td', {class:'r muted'}, '—') : el('td', {class:'r num ' + (d < 0 ? 'neg' : 'pos')}, d < 0 ? '▲ ' + fmt(-d) : fmt(d)); };
+  const tr = st.rows.reduce((s, r) => s + r.real, 0), tp = st.rows.reduce((s, r) => s + r.presu, 0);
+  $('#cmpTot').textContent = tp ? Math.round(tr / tp * 100) + '% del presupuesto usado' : '';
+  t.replaceChildren(
+    el('thead', {}, el('tr', {}, el('th', {}, 'Grupo'), el('th', {class:'r'}, 'Real'), el('th', {class:'r'}, 'Presupuesto'), el('th', {class:'r'}, 'Queda / se pasó'))),
+    el('tbody', {}, ...rows.map(r => el('tr', {}, el('td', {}, r.rubro.nombre), el('td', {class:'r num'}, fmt(r.real)), el('td', {class:'r num muted'}, r.presu ? fmt(r.presu) : '—'), cell(r)))),
+    el('tfoot', {}, el('tr', {}, el('td', {}, 'Total'), el('td', {class:'r num'}, fmt(tr)), el('td', {class:'r num'}, fmt(tp)), cell({ presu: tp, real: tr }))));
+}
+
 /* ---------- render: movimientos ---------- */
 function conceptOptions(sel, tipo, selected) {
   sel.replaceChildren();
@@ -671,12 +800,13 @@ function renderMovs() {
   const fr = $('#fRubro'), cur = fr.value;
   fr.replaceChildren(el('option', {value:''}, 'Todos los grupos'), ...rubrosOrd().map(r => el('option', {value:r.id, selected: r.id === cur}, r.nombre)));
   const box = $('#movList');
-  if (box.contains(document.activeElement) && document.activeElement.tagName === 'SELECT') return;
+  if (box.contains(document.activeElement) && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
   let ms = movsMes(S.month).sort((a,b) => b.fecha.localeCompare(a.fecha) || (b.creado || 0) - (a.creado || 0));
   if (fr.value) ms = ms.filter(m => conceptoById(m.conceptoId)?.rubroId === fr.value);
   const f = S.fMov || '';
   if (f === 'banco' || f === 'efectivo') ms = ms.filter(m => (m.medio || 'banco') === f);
   else if (f === 'ticket' || f === 'resumen') ms = ms.filter(m => m.origen === f);
+  else if (f === 'automatico') ms = ms.filter(m => m.origen === 'automatico' || m.origen === 'ofrenda');
   else if (f === 'ingreso') ms = ms.filter(m => m.tipo === 'ingreso');
   const q = norm($('#fBuscar').value);
   if (q) ms = ms.filter(m => { const c = conceptoById(m.conceptoId); return norm([m.descripcion, c?.nombre, rubroById(c?.rubroId)?.nombre, m.persona].join(' ')).includes(q); });
@@ -690,15 +820,69 @@ function renderMovs() {
     return el('div', {class:'sec', style:'gap:8px'},
       el('div', {class:'day-h'}, el('span', {}, dayLabel(fecha)), el('span', {class:'num' + (tot > 0 ? ' pos' : '')}, signed(tot))),
       el('div', {class:'list-card'}, ...arr.map(m => {
-        const sel = el('select', {'aria-label':'Concepto', onchange: e => upd('movimientos/' + m.id, { conceptoId: e.target.value })});
-        conceptOptions(sel, m.tipo, m.conceptoId); if (!conceptoById(m.conceptoId)) sel.prepend(el('option', {value:'', selected:true}, 'Sin clasificar'));
-        const delb = el('button', {class:'ghost', 'aria-label':'Borrar movimiento', onclick: () => askDelete(delb, 'movimientos/' + m.id)}, icoEl('trash'));
-        return el('details', {class:'mov', 'data-id': m.id, open: open.has(m.id)}, el('summary', {}, movRow(m)), el('div', {class:'mov-edit'}, sel, delb));
+        return el('details', {class:'mov', 'data-id': m.id, open: open.has(m.id)}, el('summary', {}, movRow(m)), movEditor(m));
       })));
   }));
 }
-function askDelete(btn, path) {
-  const box = el('span', {class:'confirm'}, '¿Borrar?', el('button', {class:'ghost', style:'color:var(--bad)', onclick: async () => { await del(path); }}, 'Sí'), el('button', {class:'ghost', onclick: () => box.replaceWith(btn)}, 'No'));
+function movEditor(m) {
+  const id = x => 'e-' + m.id + '-' + x;
+  const tipo = el('select', {id: id('tipo')}, el('option', {value:'gasto', selected: m.tipo !== 'ingreso'}, 'Gasto'), el('option', {value:'ingreso', selected: m.tipo === 'ingreso'}, 'Ingreso'));
+  const monto = el('input', {id: id('monto'), class:'num', inputmode:'decimal', value: Math.round(m.monto * 100) / 100});
+  const fecha = el('input', {id: id('fecha'), type:'date', value: m.fecha});
+  const concepto = el('select', {id: id('concepto')});
+  const fillC = (t, sel) => { conceptOptions(concepto, t, sel); if (!conceptoById(sel) || (conceptoById(sel).tipo === 'ingreso') !== (t === 'ingreso')) concepto.prepend(el('option', {value:'', selected:true}, 'Elegí…')); };
+  fillC(m.tipo, m.conceptoId);
+  const cLbl = el('span', {}, m.tipo === 'ingreso' ? 'Tipo de ingreso' : 'Concepto');
+  tipo.onchange = () => { fillC(tipo.value, ''); cLbl.textContent = tipo.value === 'ingreso' ? 'Tipo de ingreso' : 'Concepto'; };
+  const medio = el('select', {id: id('medio')}, el('option', {value:'banco', selected: (m.medio || 'banco') === 'banco'}, 'Tarjeta / banco'), el('option', {value:'efectivo', selected: m.medio === 'efectivo'}, 'Efectivo'));
+  const quien = el('select', {id: id('quien')}, ...['Mati', 'Belu', 'Familia'].map(q => el('option', {selected: (m.persona || 'Familia') === q}, q)));
+  const detalle = el('input', {id: id('detalle'), value: m.descripcion || '', placeholder:'Agregá un detalle'});
+  const delb = el('button', {class:'ghost', type:'button', 'aria-label':'Borrar movimiento', onclick: () => askDelete(delb, 'movimientos/' + m.id, m.tipo === 'ingreso' ? () => syncOfrenda(m.id, null) : null)}, icoEl('trash'), 'Borrar');
+  const save = el('button', {class:'primary', type:'button', onclick: async () => {
+    const v = parseMonto(monto.value);
+    if (!v) return toast('Poné un monto mayor a cero');
+    if (!concepto.value) return toast(tipo.value === 'ingreso' ? 'Elegí el tipo de ingreso' : 'Elegí el concepto');
+    save.disabled = true;
+    const datos = { tipo: tipo.value, monto: v, fecha: fecha.value || m.fecha, conceptoId: concepto.value, medio: medio.value, persona: quien.value, descripcion: detalle.value.trim() };
+    if (m.origen === 'ofrenda') datos.manual = true;
+    await upd('movimientos/' + m.id, datos);
+    if (m.tipo === 'ingreso' || datos.tipo === 'ingreso') await syncOfrenda(m.id, datos.tipo === 'ingreso' ? datos : null);
+    // ¿actualizar también el presupuesto? (solo gastos fijos, que equivalen a un ítem del presupuesto)
+    const c = conceptoById(datos.conceptoId), field = datos.medio === 'efectivo' ? 'presupuestoEfectivo' : 'presupuestoBanco';
+    if (datos.tipo === 'gasto' && m.origen === 'automatico' && c && !c.porcentajeIngreso && Math.round(+c[field] || 0) !== Math.round(v)) { S.askPresu = { movId: m.id, conceptoId: c.id, field, monto: v }; renderMovs(); }
+    save.disabled = false; document.activeElement?.blur?.(); toast('Cambios guardados');
+  }}, 'Guardar cambios');
+  return el('div', {class:'mov-edit'},
+    el('label', {class:'f'}, 'Tipo', tipo), el('label', {class:'f'}, 'Monto', monto),
+    el('label', {class:'f wide'}, cLbl, concepto),
+    el('label', {class:'f'}, 'Medio', medio), el('label', {class:'f'}, 'Quién', quien),
+    el('label', {class:'f'}, 'Fecha', fecha), el('span'),
+    el('label', {class:'f wide'}, 'Detalle', detalle),
+    el('div', {class:'acts'}, delb, save),
+    askPresuBox(m));
+}
+function askPresuBox(m) {
+  const a = S.askPresu; if (!a || a.movId !== m.id) return '';
+  const c = conceptoById(a.conceptoId); if (!c) return '';
+  const done = msg => { S.askPresu = null; toast(msg); renderMovs(); renderPresu(); };
+  return el('div', {class:'ask wide'},
+    el('b', {}, '¿Actualizar también el presupuesto?'),
+    el('span', {class:'small'}, c.nombre + ' figura en el presupuesto con ' + fmt(+c[a.field] || 0) + (a.field === 'presupuestoEfectivo' ? ' en efectivo' : ' por tarjeta / banco') + '. Lo pasamos a ' + fmt(a.monto) + ' para los próximos meses?'),
+    el('div', {class:'toolbar'}, el('button', {class:'primary', type:'button', onclick: async () => { await upd('conceptos/' + c.id, { [a.field]: a.monto }); done('Presupuesto actualizado'); }}, 'Sí, actualizar'), el('button', {type:'button', onclick: () => done('El presupuesto queda como estaba')}, 'No, solo este mes')));
+}
+/* ---------- ofrenda automática al cargar un ingreso ---------- */
+const newMovId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+async function addMov(data) { const id = newMovId(); await S.db.doc('movimientos/' + id).set(data); if (data.tipo === 'ingreso') await syncOfrenda(id, data); return id; }
+async function syncOfrenda(ingId, ing) {
+  const c = S.conceptos.find(x => x.porcentajeIngreso); if (!c || !S.db) return;
+  const oid = 'ofr-' + ingId, ex = S.movs.find(x => x.id === oid);
+  if (!ing || ing.tipo !== 'ingreso') { if (ex) await S.db.doc('movimientos/' + oid).delete().catch(() => {}); return; }
+  if (ex?.manual) return;
+  const ic = conceptoById(ing.conceptoId);
+  await S.db.doc('movimientos/' + oid).set({ fecha: ing.fecha, tipo: 'gasto', conceptoId: c.id, descripcion: c.porcentajeIngreso + '% de ' + (ic?.nombre || 'un ingreso') + ' (' + fmt(ing.monto) + ')', monto: Math.round(ing.monto * c.porcentajeIngreso) / 100, medio: ing.medio || 'banco', persona: ing.persona || 'Familia', origen: 'ofrenda', ingresoId: ingId, creado: Date.now() }).catch(() => {});
+}
+function askDelete(btn, path, after) {
+  const box = el('span', {class:'confirm'}, '¿Borrar?', el('button', {class:'ghost', style:'color:var(--bad)', onclick: async () => { await del(path); await after?.(); }}, 'Sí'), el('button', {class:'ghost', onclick: () => box.replaceWith(btn)}, 'No'));
   btn.replaceWith(box);
 }
 
@@ -740,7 +924,23 @@ function renderPresu() {
         pct.addEventListener('change', () => { const v = parseMonto(pct.value); if (v > 0 && v <= 100) upd('conceptos/' + c.id, { porcentajeIngreso: v }); });
         return el('div', {class:'crow'}, el('div', {class:'cname'}, name, delb), auto('presupuestoBanco', 'Tarjeta / banco'), auto('presupuestoEfectivo', 'Efectivo'), el('label', {class:'f', style:'grid-column:1/-1;flex-direction:row;align-items:center;gap:8px'}, 'Siempre el', pct, '% de los ingresos'), nat);
       }
-      return el('div', {class:'crow'}, el('div', {class:'cname'}, name, delb), el('label', {class:'f'}, ing ? 'Bancario' : 'Tarjeta / banco', money('presupuestoBanco')), el('label', {class:'f'}, 'Efectivo', money('presupuestoEfectivo')), nat);
+      let extra = '';
+      if (!ing) {
+        const cb = el('input', {type:'checkbox', id:'fijo-' + c.id, checked: esFijo(c)}); cb.addEventListener('change', () => upd('conceptos/' + c.id, { fijo: cb.checked }));
+        const fijoL = el('label', {class:'f chk', style:'grid-column:1/-1'}, cb, 'Se carga solo cada mes como movimiento');
+        let cuo = '';
+        if (c.rubroId === 'cuotas' || c.cuotasTotal) {
+          const n = cuotaDelMes(c, S.month);
+          const ni = el('input', {class:'num', inputmode:'numeric', id:'cn-' + c.id, value: n && n > 0 ? n : '', placeholder:'3'});
+          const ti = el('input', {class:'num', inputmode:'numeric', id:'ct-' + c.id, value: c.cuotasTotal || '', placeholder:'12'});
+          const guardar = () => { const a = parseInt(ni.value), b = parseInt(ti.value); if (a > 0 && b > 0 && a <= b) upd('conceptos/' + c.id, { cuotasTotal: b, cuotaInicio: addMonths(S.month, -(a - 1)) }); };
+          ni.addEventListener('change', guardar); ti.addEventListener('change', guardar);
+          const info = !c.cuotasTotal ? 'Poné el nombre de lo que compraste, el monto de cada cuota, qué cuota se paga este mes y cuántas son en total. La app la va descontando sola.' : n > c.cuotasTotal ? 'Terminada: ya no se carga.' : n < 1 ? 'Empieza en ' + monthName(c.cuotaInicio) + '.' : 'Última cuota en ' + monthName(addMonths(c.cuotaInicio, c.cuotasTotal - 1)) + '.';
+          cuo = el('div', {class:'cuotas'}, el('label', {class:'f'}, 'Cuota de ' + monthName(S.month).split(' ')[0], ni), el('label', {class:'f'}, 'Total de cuotas', ti), el('small', {}, info));
+        }
+        extra = [fijoL, cuo];
+      }
+      return el('div', {class:'crow'}, el('div', {class:'cname'}, name, delb), el('label', {class:'f'}, ing ? 'Bancario' : 'Tarjeta / banco', money('presupuestoBanco')), el('label', {class:'f'}, 'Efectivo', money('presupuestoEfectivo')), nat, extra);
     });
     const addF = el('form', {class:'addc'}, el('input', {placeholder: ing ? 'Agregar ingreso' : 'Agregar gasto a ' + r.nombre, 'aria-label':'Nuevo concepto en ' + r.nombre, id:'add-' + r.id}), el('button', {type:'submit'}, 'Agregar'));
     addF.addEventListener('submit', async e => { e.preventDefault(); const v = addF.querySelector('input').value.trim(); if (!v) return; await setDoc('conceptos/' + r.id + '--' + slug(v) + '-' + Date.now().toString(36).slice(-4), { rubroId: r.id, nombre: v, tipo: ing ? 'ingreso' : 'gasto', presupuestoBanco: 0, presupuestoEfectivo: 0, naturaleza: 'flexible', orden: 99 }); toast('Agregado a ' + r.nombre); });
@@ -763,7 +963,7 @@ function renderBankHistory() {
 
 function renderAll() {
   $('#monthLbl').textContent = monthName(S.month).replace(' de ', ' ');
-  renderHome(); renderBars(); renderLeaks(); renderTrend(); renderNature(); renderAnaTiles(); renderAI();
+  renderHome(); renderBars(); renderCmp(); renderLeaks(); renderTrend(); renderNature(); renderAnaTiles(); renderAI();
   renderMovs(); renderPresu(); renderBankHistory(); renderCierre();
 }
 
@@ -778,12 +978,13 @@ function subMovs() {
   const from = addMonths(S.month, -5) + '-01';
   unsubMovs = S.db.collection('movimientos').where('fecha', '>=', from).orderBy('fecha', 'desc').limit(1000).onSnapshot(snap => {
     S.movs = snap.docs.map(d => ({ id: d.id, ...d.data(), monto: +d.data().monto || 0 }));
+    S.movsListos = true; autoCargar();
     renderAll();
   }, e => console.warn(e));
 }
 const CFG = window.FK_CONFIG || {};
 const SB_LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js';
-const COLS = ['rubros', 'conceptos', 'movimientos', 'resumenes', 'analisis', 'cierres'];
+const COLS = ['rubros', 'conceptos', 'movimientos', 'resumenes', 'analisis', 'cierres', 'autocarga'];
 
 async function initDb() {
   let db = null;
@@ -800,8 +1001,9 @@ async function initDb() {
 function attachDb(db) {
   S.db = db;
   const sub = (col, fn) => db.collection(col).onSnapshot(snap => { fn(snap.docs.map(d => ({ id: d.id, ...d.data() }))); renderAll(); }, e => console.warn(col, e));
-  sub('rubros', a => S.rubros = a);
-  sub('conceptos', a => S.conceptos = a);
+  sub('rubros', a => { S.rubros = a; S.rubrosListos = true; migrarCuotas(); });
+  sub('conceptos', a => { S.conceptos = a; S.conceptosListos = true; migrarCuotas(); autoCargar(); });
+  sub('autocarga', a => { S.autocarga = Object.fromEntries(a.map(x => [x.id, x])); S.autocargaLista = true; autoCargar(); });
   sub('resumenes', a => S.resumenes = a);
   sub('analisis', a => { S.analisis = Object.fromEntries(a.map(x => [x.id, x])); });
   sub('cierres', a => { S.cierres = Object.fromEntries(a.map(x => [x.id, x])); S.cierresListos = true; renderCierre(); });
@@ -914,7 +1116,7 @@ async function startSupabase() {
 
 /* ---------- almacenamiento local (cuando la app se abre fuera de claude.ai) ---------- */
 const SEED = {
-  rubros: { ingresos:['Ingresos','ingreso',0], servicios:['Servicios del hogar','gasto',1], alimentacion:['Alimentación','gasto',2], familia:['Familia','gasto',3], salud:['Salud y bienestar','gasto',4], auto:['Auto','gasto',5], impuestos:['Impuestos y bancos','gasto',6], suscripciones:['Suscripciones','gasto',7], cuotas:['Cuotas','gasto',8], ofrenda:['Ofrenda','gasto',9] },
+  rubros: { ingresos:['Ingresos','ingreso',0], servicios:['Servicios del hogar','gasto',1], alimentacion:['Alimentación','gasto',2], familia:['Familia','gasto',3], salud:['Salud y bienestar','gasto',4], auto:['Auto','gasto',5], impuestos:['Impuestos y bancos','gasto',6], suscripciones:['Suscripciones','gasto',7], cuotas:['Pagos en cuotas','gasto',8], ofrenda:['Ofrenda','gasto',9], infraestructura:['Gastos en infraestructura','gasto',10], bienes:['Gastos de bienes','gasto',11], salidas:['Salidas y deliverys','gasto',12], varios:['Varios','gasto',13] },
   conceptos: [
     ['ing-mati','ingresos','Ingresos Mati'],['ing-belu','ingresos','Ingresos Belu'],
     ['tel-mati','servicios','Servicio de telefonía Mati','esencial'],['tel-belu','servicios','Servicio de telefonía Belu','esencial'],['luz','servicios','Servicio de luz','esencial'],['agua','servicios','Servicio de agua','esencial'],['gas','servicios','Servicio de gas','esencial'],
@@ -924,8 +1126,10 @@ const SEED = {
     ['patente','auto','Patente','esencial'],['nafta','auto','Nafta','esencial'],['seguro-auto','auto','Seguro de auto','esencial'],
     ['monotributo','impuestos','Monotributo','esencial'],['imp-tarjeta','impuestos','Impuestos de tarjeta','prescindible'],
     ['paramount','suscripciones','Paramount','prescindible'],['hbo','suscripciones','HBO','prescindible'],['nube','suscripciones','Nube','flexible'],['adobe','suscripciones','Paquete de Adobe','esencial'],['claude','suscripciones','Suscripción de Claude','flexible'],
-    ['cuota-1','cuotas','Cuota 1','flexible'],['cuota-2','cuotas','Cuota 2','flexible'],['cuota-3','cuotas','Cuota 3','flexible'],['cuota-4','cuotas','Cuota 4','flexible'],['cuota-5','cuotas','Cuota 5','flexible'],['cuota-6','cuotas','Cuota 6','flexible'],
-    ['ofrenda','ofrenda','Ofrenda','esencial',10]
+    ['cuota-1','cuotas','Pago en cuotas 1','flexible'],['cuota-2','cuotas','Pago en cuotas 2','flexible'],['cuota-3','cuotas','Pago en cuotas 3','flexible'],['cuota-4','cuotas','Pago en cuotas 4','flexible'],['cuota-5','cuotas','Pago en cuotas 5','flexible'],['cuota-6','cuotas','Pago en cuotas 6','flexible'],
+    ['ofrenda','ofrenda','Ofrenda','esencial',10],
+    ['infraestructura','infraestructura','Arreglos y mejoras de la casa','flexible'],['bienes','bienes','Compra de bienes','flexible'],
+    ['salidas','salidas','Salidas','prescindible'],['delivery','salidas','Delivery','prescindible'],['varios','varios','Varios','flexible']
   ]
 };
 /* ---------- navegación y eventos ---------- */
@@ -972,10 +1176,12 @@ $('#movForm').addEventListener('submit', async e => {
   if (!monto) return toast('Poné un monto mayor a cero');
   if (!$('#mConcepto').value) return toast('Elegí un concepto');
   const fecha = $('#mFecha').value;
-  await S.db?.collection('movimientos').add({ fecha, tipo: $('#mTipo').value, conceptoId: $('#mConcepto').value, descripcion: $('#mDesc').value.trim(), monto, medio: $('#mMedio').value, persona: $('#mPersona').value, origen: 'manual', creado: Date.now() })
+  if (!S.db) return toast('Sin conexión con el almacenamiento');
+  await addMov({ fecha, tipo: $('#mTipo').value, conceptoId: $('#mConcepto').value, descripcion: $('#mDesc').value.trim(), monto, medio: $('#mMedio').value, persona: $('#mPersona').value, origen: 'manual', creado: Date.now() })
     .then(() => { $('#mMonto').value = ''; $('#mDesc').value = ''; closeSheet(); toast(ym(fecha) !== S.month ? 'Guardado en ' + monthName(ym(fecha)) : 'Movimiento guardado'); })
     .catch(e => toast(errMsg(e)));
 });
+$('#autoBtn').onclick = () => S.month === ym(today()) ? autoCargar(true) : toast('Solo se pueden cargar los fijos del mes en curso');
 $('#nrToggle').onclick = () => { const f = $('#newRubro'); f.hidden = !f.hidden; if (!f.hidden) $('#nrName').focus(); };
 $('#newRubro').addEventListener('submit', async e => { e.preventDefault(); const v = $('#nrName').value.trim(); if (!v) return; await setDoc('rubros/' + slug(v), { nombre: v, tipo: 'gasto', orden: 50 }); $('#nrName').value = ''; $('#newRubro').hidden = true; toast('Grupo creado'); });
 
@@ -1052,7 +1258,7 @@ async function handleExcel(file) {
         cid = rid + '--' + slug(p.nombre) + '-' + Math.random().toString(36).slice(2, 6);
         await setDoc('conceptos/' + cid, { rubroId: rid, nombre: p.nombre, tipo: p.tipo, presupuestoBanco: 0, presupuestoEfectivo: 0, naturaleza: 'flexible', orden: 99 });
       }
-      if (asMovs) await S.db.collection('movimientos').add({ fecha: S.month + '-01', tipo: p.tipo, conceptoId: cid, descripcion: p.nombre + ' (Excel)', monto: p.monto, medio: p.medio, persona: 'Familia', origen: 'excel', creado: Date.now() });
+      if (asMovs) await addMov({ fecha: S.month + '-01', tipo: p.tipo, conceptoId: cid, descripcion: p.nombre + ' (Excel)', monto: p.monto, medio: p.medio, persona: 'Familia', origen: 'excel', creado: Date.now() });
       else if (conceptoById(cid)?.porcentajeIngreso) continue;
       else await upd('conceptos/' + cid, { [p.field]: p.monto });
       n++;
@@ -1192,7 +1398,7 @@ function showBankResult(res, fname) {
     const sel = movs.filter(m => m.incluir);
     try {
       const rid = 'r' + Date.now().toString(36);
-      for (const m of sel) await S.db.collection('movimientos').add({ fecha: m.fecha, tipo: m.tipo, conceptoId: m.conceptoId || '', descripcion: m.descripcion, monto: m.monto, medio: 'banco', persona: 'Familia', origen: 'resumen', juicio: m.juicio || '', comentario: m.comentario || '', resumenId: rid, creado: Date.now() });
+      for (const m of sel) await addMov({ fecha: m.fecha, tipo: m.tipo, conceptoId: m.conceptoId || '', descripcion: m.descripcion, monto: m.monto, medio: 'banco', persona: 'Familia', origen: 'resumen', juicio: m.juicio || '', comentario: m.comentario || '', resumenId: rid, creado: Date.now() });
       await setDoc('resumenes/' + rid, { banco: res.banco || '', periodo: res.periodo || '', archivo: fname, fecha: new Date().toISOString(), total, cantidad: sel.length, resumen: res.resumen || '', alertas: (res.alertas || []).slice(0, 12) });
       toast(sel.length + ' movimientos guardados');
       box.hidden = true; box.replaceChildren();
@@ -1278,7 +1484,7 @@ function showTicket(r, file, isImg) {
     if (!medio.value) return err.textContent = 'Elegí cómo se pagó.';
     save.disabled = true;
     try {
-      await S.db.collection('movimientos').add({ fecha: fecha.value, tipo: 'gasto', conceptoId: concepto.value, descripcion: desc.value.trim(), monto: m, medio: medio.value, persona: quien.value, origen: 'ticket', creado: Date.now() });
+      await addMov({ fecha: fecha.value, tipo: 'gasto', conceptoId: concepto.value, descripcion: desc.value.trim(), monto: m, medio: medio.value, persona: quien.value, origen: 'ticket', creado: Date.now() });
       box.replaceChildren(el('p', {class:'note', style:'margin:0 0 14px'}, 'Guardado: ' + fmt(m) + ' en ' + conceptoById(concepto.value).nombre + '.'));
       toast('Ticket cargado');
     } catch (e) { save.disabled = false; err.textContent = errMsg(e); }
