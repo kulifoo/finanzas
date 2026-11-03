@@ -611,6 +611,7 @@ function movRow(m) {
   const chipTxt = { ticket:'ticket', resumen:'resumen', automatico:'fijo', ofrenda:'automática' }[m.origen];
   if (chipTxt) sub.append(' ', el('span', {class:'chip'}, chipTxt));
   if (esUSD(m)) sub.append(' ', el('span', {class:'chip'}, 'USD'));
+  if (m.origen === 'automatico' && c?.cuotasTotal && c.cuotaInicio) { const n = cuotaDelMes(c, ym(m.fecha)); if (n >= 1) sub.append(' ', el('span', {class:'chip', title:'Cuota ' + n + ' de ' + c.cuotasTotal}, n + '/' + c.cuotasTotal)); }
   return el('div', {class:'mrow'},
     el('span', {class:'mic' + (ing ? ' in' : '')}, icoEl(ing ? 'in' : iconKey(r))),
     el('div', {class:'mtx'}, el('b', {}, c?.nombre || 'Sin clasificar'), sub),
