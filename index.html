@@ -122,6 +122,14 @@ section.view{display:flex;flex-direction:column;gap:20px;padding-top:14px}
 .hero .tile.full{grid-column:1/-1}
 .mamt{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 details.mov > summary{list-style:none;cursor:pointer}
+details.fijos > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--surface);border-radius:20px;font-weight:800;font-size:15px}
+details.fijos > summary::-webkit-details-marker{display:none}
+details.fijos > summary .cnt{font-size:12px;font-weight:700;color:var(--ink-3)}
+details.fijos > summary .tot{margin-left:auto;font-variant-numeric:tabular-nums}
+details.fijos > summary .chev{transition:transform .2s;color:var(--ink-3);display:grid}
+details.fijos[open] > summary .chev{transform:rotate(180deg)}
+details.fijos[open] > summary{border-radius:20px 20px 0 0}
+details.fijos > .list-card{border-radius:0 0 20px 20px;margin-top:0;border-top:1px solid var(--line)}
 details.mov > summary::-webkit-details-marker{display:none}
 details.mov[open] .mrow{border-bottom-color:transparent}
 .mov-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end;padding:2px 0 14px;border-bottom:1px solid var(--line)}
@@ -843,9 +851,15 @@ function renderMovs() {
   const fijos = ms.filter(m => m.origen === 'automatico').sort((a,b) => (conceptoById(a.conceptoId)?.nombre || '').localeCompare(conceptoById(b.conceptoId)?.nombre || ''));
   const resto = ms.filter(m => m.origen !== 'automatico');
   const movItem = m => el('details', {class:'mov', 'data-id': m.id, open: open.has(m.id)}, el('summary', {}, movRow(m)), m.tipo === 'cambio' ? cambioEditor(m) : movEditor(m));
-  const secFijos = fijos.length ? [el('div', {class:'sec', style:'gap:8px'},
-    el('div', {class:'day-h', style:'text-transform:none;color:var(--ink);font-size:15px;font-weight:800'}, el('span', {}, 'Gastos fijos'), el('span', {class:'num'}, signed(-fijos.reduce((s,m) => s + m.monto, 0)))),
-    el('div', {class:'list-card'}, ...fijos.map(movItem)))] : [];
+  const chev = () => { const w = document.createElement('span'); w.className = 'chev'; w.innerHTML = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'; return w; };
+  let secFijos = [];
+  if (fijos.length) {
+    const d = el('details', {class:'fijos', open: !!S.fijosOpen},
+      el('summary', {}, el('span', {}, 'Gastos fijos'), el('span', {class:'cnt'}, String(fijos.length)), el('span', {class:'tot'}, signed(-fijos.reduce((s,m) => s + m.monto, 0))), chev()),
+      el('div', {class:'list-card'}, ...fijos.map(movItem)));
+    d.addEventListener('toggle', () => { S.fijosOpen = d.open; });
+    secFijos = [d];
+  }
   const days = {}; for (const m of resto) (days[m.fecha] ||= []).push(m);
   box.replaceChildren(...secFijos, ...Object.entries(days).map(([fecha, arr]) => {
     const tot = arr.filter(m => !esUSD(m)).reduce((s,m) => s + (m.tipo === 'gasto' ? -m.monto : m.monto), 0);
@@ -950,7 +964,8 @@ function renderPresu() {
   const totI = S.conceptos.filter(c => c.tipo === 'ingreso').reduce((s,c) => s + presuConcepto(c), 0);
   $('#presuTot').replaceChildren(
     el('div', {}, el('span', {class:'label'}, 'Previsto para ' + monthName(S.month).split(' ')[0]), el('b', {}, fmt(totG))),
-    el('div', {style:'align-items:flex-end'}, el('span', {class:'label'}, 'Margen'), el('b', {class: totI - totG < 0 ? 'neg' : 'pos', style:'font-size:17px'}, signed(totI - totG))));
+    el('div', {style:'align-items:flex-end'}, el('span', {class:'label'}, 'Margen'), el('b', {class: totI - totG < 0 ? 'neg' : 'pos', style:'font-size:17px'}, signed(totI - totG)),
+      (() => { const u = S.conceptos.filter(c => c.tipo === 'ingreso').reduce((s,c) => s + (+c.presupuestoUSD || 0), 0); return u ? el('span', {class:'label', style:'margin-top:2px'}, '+ ' + fmtUSD(u) + ' esperados') : ''; })()));
   if (!S.rubros.length) { list.replaceChildren(el('div', {class:'list-card'}, el('div', {class:'empty'}, 'Todavía no hay grupos. Importá tu Excel desde Más o creá un grupo.'))); return; }
   if (list.contains(document.activeElement) && ['INPUT','SELECT'].includes(document.activeElement.tagName)) return;
   list.replaceChildren(...rubrosOrd().map(r => {
@@ -959,7 +974,8 @@ function renderPresu() {
     const presu = cs.reduce((s,c) => s + presuConcepto(c), 0);
     const dz = cs.find(c => c.porcentajeIngreso);
     const over = false;
-    const state = presu ? el('span', {class:'rstate' + (ing ? ' pos' : '')}, fmt(presu)) : el('span', {class:'rstate muted'}, 'Sin monto');
+    const presuUSD = ing ? cs.reduce((s,c) => s + (+c.presupuestoUSD || 0), 0) : 0;
+    const state = presu || presuUSD ? el('span', {class:'rstate' + (ing ? ' pos' : ''), style:'text-align:right'}, presu ? fmt(presu) : '', presuUSD ? el('span', {style:'display:block'}, (presu ? '+ ' : '') + fmtUSD(presuUSD)) : '') : el('span', {class:'rstate muted'}, 'Sin monto');
     const sub = dz ? dz.porcentajeIngreso + '% de los ingresos esperados' : ing ? 'Esperado por mes' : cs.length + (cs.length === 1 ? ' concepto' : ' conceptos');
     const head = el('div', {class:'rhead'}, el('span', {class:'mic' + (over ? ' bad' : '') + (ing ? ' in' : '')}, icoEl(iconKey(r))), el('div', {class:'mtx'}, el('b', {}, r.nombre), el('span', {class:'num'}, sub)), state);
     const bar = '';
@@ -972,7 +988,9 @@ function renderPresu() {
         const auto = (f, t) => { const b = ingresosBase(f); return el('div', {class:'f'}, t, el('div', {class:'auto'}, fmt(presuField(c, f)), el('small', {}, c.porcentajeIngreso + '% de ' + fmt(b.monto) + ' esperado'))); };
         const pct = el('input', {class:'num', inputmode:'decimal', id:'pct-' + c.id, 'aria-label':'Porcentaje de los ingresos', value: c.porcentajeIngreso, style:'width:72px'});
         pct.addEventListener('change', () => { const v = parseMonto(pct.value); if (v > 0 && v <= 100) upd('conceptos/' + c.id, { porcentajeIngreso: v }); });
-        return el('div', {class:'crow'}, el('div', {class:'cname'}, name, delb), auto('presupuestoBanco', 'Tarjeta / banco'), auto('presupuestoEfectivo', 'Efectivo'), el('label', {class:'f', style:'grid-column:1/-1;flex-direction:row;align-items:center;gap:8px'}, 'Siempre el', pct, '% de los ingresos'), nat);
+        const usdEsp = S.conceptos.filter(x => x.tipo === 'ingreso').reduce((s,x) => s + (+x.presupuestoUSD || 0), 0);
+        const usdO = usdEsp ? el('div', {class:'f', style:'grid-column:1/-1'}, 'Dólares', el('div', {class:'auto'}, fmtUSD(Math.round(usdEsp * c.porcentajeIngreso) / 100), el('small', {}, c.porcentajeIngreso + '% de ' + fmtUSD(usdEsp) + ' esperados · aparte, no se suma a los pesos'))) : '';
+        return el('div', {class:'crow'}, el('div', {class:'cname'}, name, delb), auto('presupuestoBanco', 'Tarjeta / banco'), auto('presupuestoEfectivo', 'Efectivo'), usdO, el('label', {class:'f', style:'grid-column:1/-1;flex-direction:row;align-items:center;gap:8px'}, 'Siempre el', pct, '% de los ingresos'), nat);
       }
       let extra = '';
       if (!ing) {
@@ -990,7 +1008,8 @@ function renderPresu() {
         }
         extra = [fijoL, cuo];
       }
-      return el('div', {class:'crow'}, el('div', {class:'cname'}, name, delb), el('label', {class:'f'}, ing ? 'Bancario' : 'Tarjeta / banco', money('presupuestoBanco')), el('label', {class:'f'}, 'Efectivo', money('presupuestoEfectivo')), nat, extra);
+      const usdF = ing ? el('label', {class:'f'}, 'Dólares (US$)', money('presupuestoUSD')) : '';
+      return el('div', {class:'crow'}, el('div', {class:'cname'}, name, delb), el('label', {class:'f'}, ing ? 'Bancario' : 'Tarjeta / banco', money('presupuestoBanco')), el('label', {class:'f'}, 'Efectivo', money('presupuestoEfectivo')), usdF, nat, extra);
     });
     const addF = el('form', {class:'addc'}, el('input', {placeholder: ing ? 'Agregar ingreso' : 'Agregar gasto a ' + r.nombre, 'aria-label':'Nuevo concepto en ' + r.nombre, id:'add-' + r.id}), el('button', {type:'submit'}, 'Agregar'));
     addF.addEventListener('submit', async e => { e.preventDefault(); const v = addF.querySelector('input').value.trim(); if (!v) return; await setDoc('conceptos/' + r.id + '--' + slug(v) + '-' + Date.now().toString(36).slice(-4), { rubroId: r.id, nombre: v, tipo: ing ? 'ingreso' : 'gasto', presupuestoBanco: 0, presupuestoEfectivo: 0, naturaleza: 'flexible', orden: 99 }); toast('Agregado a ' + r.nombre); });
