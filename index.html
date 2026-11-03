@@ -118,6 +118,8 @@ section.view{display:flex;flex-direction:column;gap:20px;padding-top:14px}
 .mtx{flex:1;min-width:0;display:flex;flex-direction:column}
 .mtx b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mtx span{font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usd-neg{display:block;font-size:12px;font-weight:700;color:var(--bad)}
+.hero .tile.full{grid-column:1/-1}
 .mamt{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 details.mov > summary{list-style:none;cursor:pointer}
 details.mov > summary::-webkit-details-marker{display:none}
@@ -363,6 +365,7 @@ nav.bottom .fab:hover{background:var(--accent-2)}
       <button data-f="resumen" aria-pressed="false">Resumen</button>
       <button data-f="automatico" aria-pressed="false">Fijos</button>
       <button data-f="ingreso" aria-pressed="false">Ingresos</button>
+      <button data-f="usd" aria-pressed="false">Dólares</button>
     </div>
     <select id="fRubro" aria-label="Filtrar por grupo"><option value="">Todos los grupos</option></select>
     <div id="movList" class="sec"></div>
@@ -480,13 +483,17 @@ nav.bottom .fab:hover{background:var(--accent-2)}
   </div>
   <div id="tkBox"></div>
   <form id="movForm" class="form-grid" autocomplete="off">
-    <div class="seg-tipo wide" id="tipoSeg"><button type="button" data-t="gasto" aria-pressed="true">Gasto</button><button type="button" data-t="ingreso" aria-pressed="false">Ingreso</button></div>
+    <div class="seg-tipo wide" id="tipoSeg" style="grid-template-columns:repeat(3,minmax(0,1fr))"><button type="button" data-t="gasto" aria-pressed="true">Gasto</button><button type="button" data-t="ingreso" aria-pressed="false">Ingreso</button><button type="button" data-t="cambio" aria-pressed="false">Vender USD</button></div>
+    <div class="seg-tipo wide" id="monSeg"><button type="button" data-m="ARS" aria-pressed="true">Pesos</button><button type="button" data-m="USD" aria-pressed="false">Dólares</button></div>
+    <input type="hidden" id="mMoneda" value="ARS">
     <input type="hidden" id="mTipo" value="gasto">
-    <label class="f wide">Monto (ARS)<input id="mMonto" class="num" inputmode="decimal" placeholder="0" required style="font-size:24px;font-weight:800;text-align:left"></label>
-    <label class="f wide">Concepto<select id="mConcepto" required></select></label>
+    <label class="f wide"><span id="mMontoLbl">Monto en pesos</span><input id="mMonto" class="num" inputmode="decimal" placeholder="0" required style="font-size:24px;font-weight:800;text-align:left"></label>
+    <label class="f wide" id="cotWrap" hidden>A cuánto vendiste cada dólar<input id="mCot" class="num" inputmode="decimal" placeholder="Ej. 1200"></label>
+    <div class="wide small" id="cambioRes" hidden></div>
+    <label class="f wide" id="cWrap">Concepto<select id="mConcepto"></select></label>
     <label class="f wide">Detalle<input id="mDesc" placeholder="Ej. compra semanal"></label>
     <label class="f">Fecha<input type="date" id="mFecha" required></label>
-    <label class="f">Medio<select id="mMedio"><option value="banco">Tarjeta / banco</option><option value="efectivo">Efectivo</option></select></label>
+    <label class="f"><span id="mMedioLbl">Medio</span><select id="mMedio"><option value="banco">Tarjeta / banco</option><option value="efectivo">Efectivo</option></select></label>
     <label class="f wide">Quién<select id="mPersona"><option>Mati</option><option>Belu</option><option>Familia</option></select></label>
     <button class="primary wide" type="submit" style="min-height:52px;font-size:16px">Guardar</button>
   </form>
@@ -500,6 +507,9 @@ nav.bottom .fab:hover{background:var(--accent-2)}
 const $ = s => document.querySelector(s);
 const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k,v] of Object.entries(attrs)) { if (v == null || v === false) continue; if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v === true ? '' : v); } for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : String(c)); return e; };
 const fmt = n => '$ ' + Math.round(n || 0).toLocaleString('es-AR');
+const fmtUSD = n => 'US$ ' + (+n || 0).toLocaleString('es-AR', { maximumFractionDigits: 2 });
+const fmtM = (n, mon) => mon === 'USD' ? fmtUSD(n) : fmt(n);
+const esUSD = m => m.moneda === 'USD';
 const fmtShort = n => { const a = Math.abs(n); if (a >= 1e6) return '$' + (n/1e6).toLocaleString('es-AR',{maximumFractionDigits:1}) + 'M'; if (a >= 1e3) return '$' + Math.round(n/1e3).toLocaleString('es-AR') + 'k'; return '$' + Math.round(n); };
 const parseMonto = s => { if (typeof s === 'number') return s; s = String(s || '').replace(/[^\d,.\-]/g, ''); if (s.includes(',') ) s = s.replace(/\./g, '').replace(',', '.'); else if ((s.match(/\./g)||[]).length > 1 || /\.\d{3}$/.test(s)) s = s.replace(/\./g, ''); const n = parseFloat(s); return isNaN(n) ? 0 : n; };
 const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -521,7 +531,7 @@ const rubrosOrd = () => [...S.rubros].sort((a,b) => (a.orden ?? 99) - (b.orden ?
 // Base de ingresos por medio: lo ingresado en el mes si ya hay ingresos cargados; si no, lo esperado
 const ingresosBase = (field, k = S.month) => {
   const medio = field === 'presupuestoEfectivo' ? 'efectivo' : 'banco';
-  const real = S.movs.filter(m => m.tipo === 'ingreso' && (m.medio || 'banco') === medio && ym(m.fecha) === k).reduce((s,m) => s + m.monto, 0);
+  const real = S.movs.filter(m => m.tipo === 'ingreso' && !esUSD(m) && (m.medio || 'banco') === medio && ym(m.fecha) === k).reduce((s,m) => s + m.monto, 0);
   if (real > 0) return { monto: real, real: true };
   return { monto: S.conceptos.filter(c => c.tipo === 'ingreso').reduce((s,c) => s + (+c[field] || 0), 0), real: false };
 };
@@ -531,10 +541,17 @@ const presuConcepto = (c, k) => presuField(c, 'presupuestoBanco', k) + presuFiel
 function diezmo(k = S.month) {
   const c = S.conceptos.find(x => x.porcentajeIngreso); if (!c) return null;
   const debe = presuConcepto(c, k);
-  const dado = S.movs.filter(m => m.tipo === 'gasto' && m.conceptoId === c.id && ym(m.fecha) === k).reduce((s,m) => s + m.monto, 0);
+  const dado = S.movs.filter(m => m.tipo === 'gasto' && !esUSD(m) && m.conceptoId === c.id && ym(m.fecha) === k).reduce((s,m) => s + m.monto, 0);
   return { c, debe, dado, pct: c.porcentajeIngreso };
 }
-const movsMes = k => S.movs.filter(m => ym(m.fecha) === k);
+const movsMes = k => S.movs.filter(m => ym(m.fecha) === k && !esUSD(m));
+const movsMesTodos = k => S.movs.filter(m => ym(m.fecha) === k);
+function balanceUSD() {
+  const a = S.usdMovs || [], b = S.usdCambios || [];
+  const ent = a.filter(m => m.tipo === 'ingreso').reduce((s,m) => s + (+m.monto || 0), 0);
+  const sal = a.filter(m => m.tipo === 'gasto').reduce((s,m) => s + (+m.monto || 0), 0) + b.reduce((s,m) => s + (+m.usd || 0), 0);
+  return { ent, sal, bal: ent - sal };
+}
 function stats(k) {
   const ms = movsMes(k);
   const gastos = ms.filter(m => m.tipo === 'gasto'), ingresos = ms.filter(m => m.tipo === 'ingreso');
@@ -549,7 +566,8 @@ function stats(k) {
   const rows = Object.values(porRubro); if (sin.real) rows.push(sin);
   const nat = { esencial: 0, flexible: 0, prescindible: 0, sin: 0 };
   for (const m of gastos) { const c = conceptoById(m.conceptoId); const n = c?.naturaleza; if (n && nat[n] != null) nat[n] += m.monto; else nat.sin += m.monto; }
-  return { ms, gastos, ingresos, g, i, presuG, presuI, rows, nat };
+  const cambios = ms.filter(m => m.tipo === 'cambio'), cam = cambios.reduce((s,m) => s + m.monto, 0);
+  return { ms, gastos, ingresos, g, i, presuG, presuI, rows, nat, cambios, cam };
 }
 
 /* ---------- íconos ---------- */
@@ -565,6 +583,7 @@ const ICONS = {
   heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>',
   in: '<path d="M17 7L7 17M7 9v8h8"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="7.5" r="1.3"/>',
+  swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'
 };
 const BY_ID = { alimentacion:'cart', servicios:'bolt', familia:'smile', salud:'pulse', auto:'fuel', impuestos:'receipt', suscripciones:'tv', cuotas:'card', ofrenda:'heart', ingresos:'in' };
@@ -586,35 +605,43 @@ function setMe(email) {
 
 /* ---------- render: inicio ---------- */
 function movRow(m) {
+  if (m.tipo === 'cambio') return el('div', {class:'mrow'},
+    el('span', {class:'mic in'}, icoEl('swap')),
+    el('div', {class:'mtx'}, el('b', {}, 'Venta de dólares'), el('span', {}, [fmtUSD(m.usd) + ' a ' + fmt(m.cotizacion), m.medio === 'efectivo' ? 'Efectivo' : 'Banco', m.persona].filter(Boolean).join(' · '))),
+    el('span', {class:'mamt pos', style:'text-align:right'}, '+' + fmt(m.monto), el('span', {class:'usd-neg'}, '−' + fmtUSD(m.usd))));
   const c = conceptoById(m.conceptoId), r = c && rubroById(c.rubroId), ing = m.tipo === 'ingreso';
   const sub = el('span', {}, [m.medio === 'efectivo' ? 'Efectivo' : (ing ? 'Banco' : 'Tarjeta / banco'), m.persona].filter(Boolean).join(' · '));
   const chipTxt = { ticket:'ticket', resumen:'resumen', automatico:'fijo', ofrenda:'automática' }[m.origen];
   if (chipTxt) sub.append(' ', el('span', {class:'chip'}, chipTxt));
+  if (esUSD(m)) sub.append(' ', el('span', {class:'chip'}, 'USD'));
   return el('div', {class:'mrow'},
     el('span', {class:'mic' + (ing ? ' in' : '')}, icoEl(ing ? 'in' : iconKey(r))),
     el('div', {class:'mtx'}, el('b', {}, c?.nombre || 'Sin clasificar'), sub),
-    el('span', {class:'mamt' + (ing ? ' pos' : '')}, (ing ? '+' : '−') + fmt(m.monto)));
+    el('span', {class:'mamt' + (ing ? ' pos' : '')}, (ing ? '+' : '−') + fmtM(m.monto, m.moneda)));
 }
 function renderHome() {
   const st = stats(S.month), hoy = ym(today());
   const porMedio = (arr, med) => arr.filter(m => (m.medio || 'banco') === med).reduce((s, m) => s + m.monto, 0);
-  const banco = porMedio(st.ingresos, 'banco') - porMedio(st.gastos, 'banco');
-  const efectivo = porMedio(st.ingresos, 'efectivo') - porMedio(st.gastos, 'efectivo');
-  const bal = st.i - st.g;
+  const banco = porMedio(st.ingresos, 'banco') + porMedio(st.cambios, 'banco') - porMedio(st.gastos, 'banco');
+  const efectivo = porMedio(st.ingresos, 'efectivo') + porMedio(st.cambios, 'efectivo') - porMedio(st.gastos, 'efectivo');
+  const U = balanceUSD();
+  const camMedio = med => porMedio(st.cambios, med);
+  const bal = st.i + st.cam - st.g;
   const hero = $('#hero');
   hero.className = 'hero';
   const lbl = S.month === hoy ? 'Balance en tiempo real' : 'Balance de ' + monthName(S.month).split(' ')[0];
   const tile = (t, v, i, g) => el('div', {class:'tile' + (v < 0 ? ' over' : '')}, el('span', {}, t), el('b', {}, signed(v)), el('span', {style:'font-size:11px;font-weight:600;opacity:.65'}, '+' + fmtShort(i) + ' / −' + fmtShort(g)));
+  const usdTile = el('div', {class:'tile full' + (U.bal < 0 ? ' over' : '')}, el('span', {}, 'Dólares · total acumulado'), el('b', {}, (U.bal < 0 ? '−' : '') + fmtUSD(Math.abs(U.bal))), el('span', {style:'font-size:11px;font-weight:600;opacity:.65'}, 'Entraron ' + fmtUSD(U.ent) + ' · salieron o se vendieron ' + fmtUSD(U.sal)));
   hero.replaceChildren(el('span', {class:'lbl'}, lbl), el('span', {class:'big'}, signed(bal)),
-    el('span', {class:'sub'}, 'Entraron ' + fmt(st.i) + ' · salieron ' + fmt(st.g)),
-    el('div', {class:'tiles'}, tile('Banco y tarjeta', banco, porMedio(st.ingresos, 'banco'), porMedio(st.gastos, 'banco')), tile('Efectivo', efectivo, porMedio(st.ingresos, 'efectivo'), porMedio(st.gastos, 'efectivo'))));
+    el('span', {class:'sub'}, 'Entraron ' + fmt(st.i + st.cam) + (st.cam ? ' (' + fmt(st.cam) + ' por venta de dólares)' : '') + ' · salieron ' + fmt(st.g)),
+    el('div', {class:'tiles'}, tile('Banco y tarjeta', banco, porMedio(st.ingresos, 'banco') + camMedio('banco'), porMedio(st.gastos, 'banco')), tile('Efectivo', efectivo, porMedio(st.ingresos, 'efectivo') + camMedio('efectivo'), porMedio(st.gastos, 'efectivo')), usdTile));
   // fugas resumidas
   const L = leaks(); const top = [...L.filter(l => l.lvl !== 'info'), ...L.filter(l => l.lvl === 'info')].slice(0, 2);
   const tagTxt = { bad:'▲ Se pasó', warn:'~ Revisar', info:'i Dato' };
   $('#leaksHome').replaceChildren(...(top.length ? top.map(l => el('div', {class:'lcard ' + l.lvl}, el('span', {class:'tag'}, tagTxt[l.lvl]), el('b', {}, l.t), el('p', {}, l.d)))
     : [el('div', {class:'lcard info', style:'grid-column:1/-1'}, el('span', {class:'tag'}, '✓ Todo en orden'), el('p', {}, 'Las fugas aparecen cuando un grupo se pasa del presupuesto, hay gastos prescindibles o compras chicas que se repiten.'))]));
   // últimos movimientos
-  const ms = movsMes(S.month).sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.creado || 0) - (a.creado || 0)).slice(0, 5);
+  const ms = movsMesTodos(S.month).sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.creado || 0) - (a.creado || 0)).slice(0, 5);
   $('#recent').replaceChildren(...(ms.length ? ms.map(movRow) : [el('div', {class:'empty'}, el('b', {}, 'Todavía no hay movimientos en ' + monthName(S.month).split(' ')[0]), el('button', {class:'link', onclick: openSheet}, 'Cargar el primero'))]));
 }
 function tipOn(node, text) {
@@ -801,26 +828,27 @@ function renderMovs() {
   fr.replaceChildren(el('option', {value:''}, 'Todos los grupos'), ...rubrosOrd().map(r => el('option', {value:r.id, selected: r.id === cur}, r.nombre)));
   const box = $('#movList');
   if (box.contains(document.activeElement) && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
-  let ms = movsMes(S.month).sort((a,b) => b.fecha.localeCompare(a.fecha) || (b.creado || 0) - (a.creado || 0));
+  let ms = movsMesTodos(S.month).sort((a,b) => b.fecha.localeCompare(a.fecha) || (b.creado || 0) - (a.creado || 0));
   if (fr.value) ms = ms.filter(m => conceptoById(m.conceptoId)?.rubroId === fr.value);
   const f = S.fMov || '';
   if (f === 'banco' || f === 'efectivo') ms = ms.filter(m => (m.medio || 'banco') === f);
   else if (f === 'ticket' || f === 'resumen') ms = ms.filter(m => m.origen === f);
   else if (f === 'automatico') ms = ms.filter(m => m.origen === 'automatico' || m.origen === 'ofrenda');
   else if (f === 'ingreso') ms = ms.filter(m => m.tipo === 'ingreso');
+  else if (f === 'usd') ms = ms.filter(m => esUSD(m) || m.tipo === 'cambio');
   const q = norm($('#fBuscar').value);
-  if (q) ms = ms.filter(m => { const c = conceptoById(m.conceptoId); return norm([m.descripcion, c?.nombre, rubroById(c?.rubroId)?.nombre, m.persona].join(' ')).includes(q); });
+  if (q) ms = ms.filter(m => { const c = conceptoById(m.conceptoId); return norm([m.descripcion, m.tipo === 'cambio' ? 'venta de dolares usd' : '', c?.nombre, rubroById(c?.rubroId)?.nombre, m.persona].join(' ')).includes(q); });
   if (!ms.length) { box.replaceChildren(el('div', {class:'list-card'}, el('div', {class:'empty'}, 'No hay movimientos en ' + monthName(S.month).split(' ')[0] + ' con estos filtros.'))); return; }
   const open = new Set([...box.querySelectorAll('details.mov[open]')].map(d => d.dataset.id));
   const hoy = today(), ayer = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return isoLocal(d); })();
   const dayLabel = f => f === hoy ? 'Hoy' : f === ayer ? 'Ayer' : new Date(f + 'T12:00').toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short' });
   const days = {}; for (const m of ms) (days[m.fecha] ||= []).push(m);
   box.replaceChildren(...Object.entries(days).map(([fecha, arr]) => {
-    const tot = arr.reduce((s,m) => s + (m.tipo === 'gasto' ? -m.monto : m.monto), 0);
+    const tot = arr.filter(m => !esUSD(m)).reduce((s,m) => s + (m.tipo === 'gasto' ? -m.monto : m.monto), 0);
     return el('div', {class:'sec', style:'gap:8px'},
       el('div', {class:'day-h'}, el('span', {}, dayLabel(fecha)), el('span', {class:'num' + (tot > 0 ? ' pos' : '')}, signed(tot))),
       el('div', {class:'list-card'}, ...arr.map(m => {
-        return el('details', {class:'mov', 'data-id': m.id, open: open.has(m.id)}, el('summary', {}, movRow(m)), movEditor(m));
+        return el('details', {class:'mov', 'data-id': m.id, open: open.has(m.id)}, el('summary', {}, movRow(m)), m.tipo === 'cambio' ? cambioEditor(m) : movEditor(m));
       })));
   }));
 }
@@ -836,6 +864,7 @@ function movEditor(m) {
   tipo.onchange = () => { fillC(tipo.value, ''); cLbl.textContent = tipo.value === 'ingreso' ? 'Tipo de ingreso' : 'Concepto'; };
   const medio = el('select', {id: id('medio')}, el('option', {value:'banco', selected: (m.medio || 'banco') === 'banco'}, 'Tarjeta / banco'), el('option', {value:'efectivo', selected: m.medio === 'efectivo'}, 'Efectivo'));
   const quien = el('select', {id: id('quien')}, ...['Mati', 'Belu', 'Familia'].map(q => el('option', {selected: (m.persona || 'Familia') === q}, q)));
+  const moneda = el('select', {id: id('moneda')}, el('option', {value:'ARS', selected: !esUSD(m)}, 'Pesos'), el('option', {value:'USD', selected: esUSD(m)}, 'Dólares'));
   const detalle = el('input', {id: id('detalle'), value: m.descripcion || '', placeholder:'Agregá un detalle'});
   const delb = el('button', {class:'ghost', type:'button', 'aria-label':'Borrar movimiento', onclick: () => askDelete(delb, 'movimientos/' + m.id, m.tipo === 'ingreso' ? () => syncOfrenda(m.id, null) : null)}, icoEl('trash'), 'Borrar');
   const save = el('button', {class:'primary', type:'button', onclick: async () => {
@@ -843,23 +872,49 @@ function movEditor(m) {
     if (!v) return toast('Poné un monto mayor a cero');
     if (!concepto.value) return toast(tipo.value === 'ingreso' ? 'Elegí el tipo de ingreso' : 'Elegí el concepto');
     save.disabled = true;
-    const datos = { tipo: tipo.value, monto: v, fecha: fecha.value || m.fecha, conceptoId: concepto.value, medio: medio.value, persona: quien.value, descripcion: detalle.value.trim() };
+    const datos = { tipo: tipo.value, monto: v, fecha: fecha.value || m.fecha, conceptoId: concepto.value, medio: medio.value, persona: quien.value, descripcion: detalle.value.trim(), moneda: moneda.value };
     if (m.origen === 'ofrenda') datos.manual = true;
     await upd('movimientos/' + m.id, datos);
     if (m.tipo === 'ingreso' || datos.tipo === 'ingreso') await syncOfrenda(m.id, datos.tipo === 'ingreso' ? datos : null);
     // ¿actualizar también el presupuesto? (solo gastos fijos, que equivalen a un ítem del presupuesto)
     const c = conceptoById(datos.conceptoId), field = datos.medio === 'efectivo' ? 'presupuestoEfectivo' : 'presupuestoBanco';
-    if (datos.tipo === 'gasto' && m.origen === 'automatico' && c && !c.porcentajeIngreso && Math.round(+c[field] || 0) !== Math.round(v)) { S.askPresu = { movId: m.id, conceptoId: c.id, field, monto: v }; renderMovs(); }
+    if (datos.tipo === 'gasto' && datos.moneda !== 'USD' && m.origen === 'automatico' && c && !c.porcentajeIngreso && Math.round(+c[field] || 0) !== Math.round(v)) { S.askPresu = { movId: m.id, conceptoId: c.id, field, monto: v }; renderMovs(); }
     save.disabled = false; document.activeElement?.blur?.(); toast('Cambios guardados');
   }}, 'Guardar cambios');
   return el('div', {class:'mov-edit'},
     el('label', {class:'f'}, 'Tipo', tipo), el('label', {class:'f'}, 'Monto', monto),
     el('label', {class:'f wide'}, cLbl, concepto),
     el('label', {class:'f'}, 'Medio', medio), el('label', {class:'f'}, 'Quién', quien),
-    el('label', {class:'f'}, 'Fecha', fecha), el('span'),
+    el('label', {class:'f'}, 'Fecha', fecha), el('label', {class:'f'}, 'Moneda', moneda),
     el('label', {class:'f wide'}, 'Detalle', detalle),
     el('div', {class:'acts'}, delb, save),
     askPresuBox(m));
+}
+function cambioEditor(m) {
+  const id = x => 'e-' + m.id + '-' + x;
+  const usd = el('input', {id: id('usd'), class:'num', inputmode:'decimal', value: m.usd});
+  const cot = el('input', {id: id('cot'), class:'num', inputmode:'decimal', value: m.cotizacion});
+  const res = el('span', {class:'small wide'});
+  const calc = () => { res.textContent = 'Recibiste ' + fmt(parseMonto(usd.value) * parseMonto(cot.value)) + ' en pesos'; };
+  usd.oninput = cot.oninput = calc; calc();
+  const medio = el('select', {id: id('medio')}, el('option', {value:'banco', selected: (m.medio || 'banco') === 'banco'}, 'Banco'), el('option', {value:'efectivo', selected: m.medio === 'efectivo'}, 'Efectivo'));
+  const quien = el('select', {id: id('quien')}, ...['Mati', 'Belu', 'Familia'].map(q => el('option', {selected: (m.persona || 'Familia') === q}, q)));
+  const fecha = el('input', {id: id('fecha'), type:'date', value: m.fecha});
+  const detalle = el('input', {id: id('detalle'), value: m.descripcion || '', placeholder:'Agregá un detalle'});
+  const delb = el('button', {class:'ghost', type:'button', 'aria-label':'Borrar venta', onclick: () => askDelete(delb, 'movimientos/' + m.id)}, icoEl('trash'), 'Borrar');
+  const save = el('button', {class:'primary', type:'button', onclick: async () => {
+    const u = parseMonto(usd.value), c = parseMonto(cot.value);
+    if (!u || !c) return toast('Completá los dólares y la cotización');
+    save.disabled = true;
+    await upd('movimientos/' + m.id, { usd: u, cotizacion: c, monto: Math.round(u * c * 100) / 100, medio: medio.value, persona: quien.value, fecha: fecha.value || m.fecha, descripcion: detalle.value.trim() });
+    save.disabled = false; document.activeElement?.blur?.(); toast('Cambios guardados');
+  }}, 'Guardar cambios');
+  return el('div', {class:'mov-edit'},
+    el('label', {class:'f'}, 'Dólares vendidos', usd), el('label', {class:'f'}, 'Cotización', cot), res,
+    el('label', {class:'f'}, 'Entraron en', medio), el('label', {class:'f'}, 'Quién', quien),
+    el('label', {class:'f'}, 'Fecha', fecha), el('span'),
+    el('label', {class:'f wide'}, 'Detalle', detalle),
+    el('div', {class:'acts'}, delb, save));
 }
 function askPresuBox(m) {
   const a = S.askPresu; if (!a || a.movId !== m.id) return '';
@@ -879,7 +934,7 @@ async function syncOfrenda(ingId, ing) {
   if (!ing || ing.tipo !== 'ingreso') { if (ex) await S.db.doc('movimientos/' + oid).delete().catch(() => {}); return; }
   if (ex?.manual) return;
   const ic = conceptoById(ing.conceptoId);
-  await S.db.doc('movimientos/' + oid).set({ fecha: ing.fecha, tipo: 'gasto', conceptoId: c.id, descripcion: c.porcentajeIngreso + '% de ' + (ic?.nombre || 'un ingreso') + ' (' + fmt(ing.monto) + ')', monto: Math.round(ing.monto * c.porcentajeIngreso) / 100, medio: ing.medio || 'banco', persona: ing.persona || 'Familia', origen: 'ofrenda', ingresoId: ingId, creado: Date.now() }).catch(() => {});
+  await S.db.doc('movimientos/' + oid).set({ fecha: ing.fecha, tipo: 'gasto', conceptoId: c.id, descripcion: c.porcentajeIngreso + '% de ' + (ic?.nombre || 'un ingreso') + ' (' + fmtM(ing.monto, ing.moneda) + ')', monto: Math.round(ing.monto * c.porcentajeIngreso) / 100, moneda: ing.moneda === 'USD' ? 'USD' : 'ARS', medio: ing.medio || 'banco', persona: ing.persona || 'Familia', origen: 'ofrenda', ingresoId: ingId, creado: Date.now() }).catch(() => {});
 }
 function askDelete(btn, path, after) {
   const box = el('span', {class:'confirm'}, '¿Borrar?', el('button', {class:'ghost', style:'color:var(--bad)', onclick: async () => { await del(path); await after?.(); }}, 'Sí'), el('button', {class:'ghost', onclick: () => box.replaceWith(btn)}, 'No'));
@@ -1006,6 +1061,8 @@ function attachDb(db) {
   sub('autocarga', a => { S.autocarga = Object.fromEntries(a.map(x => [x.id, x])); S.autocargaLista = true; autoCargar(); });
   sub('resumenes', a => S.resumenes = a);
   sub('analisis', a => { S.analisis = Object.fromEntries(a.map(x => [x.id, x])); });
+  db.collection('movimientos').where('moneda', '==', 'USD').onSnapshot(snap => { S.usdMovs = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); }, e => console.warn('usd', e));
+  db.collection('movimientos').where('tipo', '==', 'cambio').onSnapshot(snap => { S.usdCambios = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); }, e => console.warn('cambios', e));
   sub('cierres', a => { S.cierres = Object.fromEntries(a.map(x => [x.id, x])); S.cierresListos = true; renderCierre(); });
   subMovs();
 }
@@ -1158,10 +1215,25 @@ $('#meBtn').onclick = () => go('ajustes');
 $('#prevM').onclick = () => { S.month = addMonths(S.month, -1); subMovs(); renderAll(); };
 $('#nextM').onclick = () => { S.month = addMonths(S.month, 1); subMovs(); renderAll(); };
 $('#mFecha').value = today();
+function formLabels() {
+  const t = $('#mTipo').value, usd = $('#mMoneda').value === 'USD', cam = t === 'cambio';
+  $('#cWrap').hidden = cam; $('#monSeg').hidden = cam; $('#cambioRes').hidden = !cam;
+  $('#cotWrap').hidden = !cam;
+  $('#mMontoLbl').textContent = cam ? 'Dólares que vendiste' : usd ? 'Monto en dólares' : 'Monto en pesos';
+  $('#mMedioLbl').textContent = cam ? 'Dónde entran los pesos' : 'Medio';
+  if (cam) { const u = parseMonto($('#mMonto').value), c = parseMonto($('#mCot').value); $('#cambioRes').textContent = u && c ? 'Entran ' + fmt(u * c) + ' en pesos y salen ' + fmtUSD(u) + ' de tus dólares' : 'Poné cuántos dólares vendiste y a cuánto, y la app calcula los pesos.'; }
+}
+$('#mMonto').addEventListener('input', formLabels); $('#mCot').addEventListener('input', formLabels);
 $('#tipoSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
   $('#mTipo').value = b.dataset.t;
   $('#tipoSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-  conceptOptions($('#mConcepto'), b.dataset.t, '');
+  if (b.dataset.t !== 'cambio') conceptOptions($('#mConcepto'), b.dataset.t, '');
+  formLabels();
+});
+$('#monSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
+  $('#mMoneda').value = b.dataset.m;
+  $('#monSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  formLabels();
 });
 $('#fPills').querySelectorAll('button').forEach(b => b.onclick = () => {
   S.fMov = b.dataset.f;
@@ -1172,13 +1244,17 @@ $('#fBuscar').addEventListener('input', renderMovs);
 $('#fRubro').onchange = renderMovs;
 $('#movForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const monto = parseMonto($('#mMonto').value);
-  if (!monto) return toast('Poné un monto mayor a cero');
-  if (!$('#mConcepto').value) return toast('Elegí un concepto');
+  const monto = parseMonto($('#mMonto').value), cam = $('#mTipo').value === 'cambio';
+  if (!monto) return toast(cam ? 'Poné cuántos dólares vendiste' : 'Poné un monto mayor a cero');
+  const cot = parseMonto($('#mCot').value);
+  if (cam && !cot) return toast('Poné a cuánto vendiste cada dólar');
+  if (!cam && !$('#mConcepto').value) return toast('Elegí un concepto');
   const fecha = $('#mFecha').value;
   if (!S.db) return toast('Sin conexión con el almacenamiento');
-  await addMov({ fecha, tipo: $('#mTipo').value, conceptoId: $('#mConcepto').value, descripcion: $('#mDesc').value.trim(), monto, medio: $('#mMedio').value, persona: $('#mPersona').value, origen: 'manual', creado: Date.now() })
-    .then(() => { $('#mMonto').value = ''; $('#mDesc').value = ''; closeSheet(); toast(ym(fecha) !== S.month ? 'Guardado en ' + monthName(ym(fecha)) : 'Movimiento guardado'); })
+  const base = { fecha, descripcion: $('#mDesc').value.trim(), medio: $('#mMedio').value, persona: $('#mPersona').value, origen: 'manual', creado: Date.now() };
+  await addMov(cam ? { ...base, tipo: 'cambio', usd: monto, cotizacion: cot, monto: Math.round(monto * cot * 100) / 100 }
+                   : { ...base, tipo: $('#mTipo').value, conceptoId: $('#mConcepto').value, monto, moneda: $('#mMoneda').value })
+    .then(() => { $('#mMonto').value = ''; $('#mCot').value = ''; formLabels(); $('#mDesc').value = ''; closeSheet(); toast(ym(fecha) !== S.month ? 'Guardado en ' + monthName(ym(fecha)) : 'Movimiento guardado'); })
     .catch(e => toast(errMsg(e)));
 });
 $('#autoBtn').onclick = () => S.month === ym(today()) ? autoCargar(true) : toast('Solo se pueden cargar los fijos del mes en curso');
@@ -1585,7 +1661,7 @@ $('#restoreFile').addEventListener('change', async e => {
 $('#exportBtn').onclick = async () => {
   const dl = await window.claude?.use?.('downloads');
   await loadScript(XLSX_URL);
-  const rows = movsMes(S.month).sort((a,b) => a.fecha.localeCompare(b.fecha)).map(m => { const c = conceptoById(m.conceptoId); return { Fecha: m.fecha, Tipo: m.tipo, Grupo: rubroById(c?.rubroId)?.nombre || '', Concepto: c?.nombre || '', Detalle: m.descripcion || '', Medio: m.medio, Quién: m.persona || '', Monto: m.monto, 'Tipo de gasto': NAT[c?.naturaleza] || '', Origen: m.origen || 'manual' }; });
+  const rows = movsMesTodos(S.month).sort((a,b) => a.fecha.localeCompare(b.fecha)).map(m => { const c = conceptoById(m.conceptoId); return { Fecha: m.fecha, Tipo: m.tipo === 'cambio' ? 'venta de dólares' : m.tipo, Grupo: rubroById(c?.rubroId)?.nombre || '', Concepto: c?.nombre || '', Detalle: m.descripcion || '', Medio: m.medio, Quién: m.persona || '', Moneda: esUSD(m) ? 'USD' : 'ARS', Monto: m.monto, 'USD vendidos': m.usd || '', Cotización: m.cotizacion || '', 'Tipo de gasto': NAT[c?.naturaleza] || '', Origen: m.origen || 'manual' }; });
   const presu = S.conceptos.map(c => ({ Grupo: rubroById(c.rubroId)?.nombre || '', Concepto: c.nombre, Tipo: c.tipo || 'gasto', 'Tarjeta / banco': Math.round(presuField(c, 'presupuestoBanco')), Efectivo: Math.round(presuField(c, 'presupuestoEfectivo')), 'Tipo de gasto': NAT[c.naturaleza] || '' }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Movimientos');
